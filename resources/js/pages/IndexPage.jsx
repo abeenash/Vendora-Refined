@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Link } from "@inertiajs/react";
 import dashboard1 from "../images/dash1.png";
 import dashboard2 from "../images/dash2.png";
 import dashboard3 from "../images/dash3.png";
@@ -30,7 +29,7 @@ const IndexPage = () => {
                 transition={{ duration: 0.6, ease: "easeInOut" }}
             >
                 <motion.div
-                    className="text-3xl font-extrabold tracking-wide flex space-x-1 text-cyan-600"
+                    className="text-3xl font-extrabold tracking-wide flex space-x-1 text-teal-600"
                     initial="hidden"
                     animate="visible"
                     variants={{
@@ -46,13 +45,13 @@ const IndexPage = () => {
                                 visible: { y: 0, opacity: 1 },
                             }}
                             transition={{ duration: 0.4 }}
-                            className="hover:text-cyan-800 transition-colors cursor-default"
+                            className="hover:text-teal-500 transition-colors cursor-default"
                         >
                             {char}
                         </motion.span>
                     ))}
                 </motion.div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 animate-pulse" />
             </motion.header>
 
 
@@ -94,8 +93,8 @@ const IndexPage = () => {
                     </motion.p>
 
                     <motion.a
-                        href="/register"
-                        className="mt-10 inline-block px-8 py-4 bg-cyan-600 text-white text-lg font-semibold rounded-lg shadow-xl hover:bg-cyan-700 transition-transform hover:scale-105"
+                        href="/login"
+                        className="mt-10 inline-block px-8 py-4 bg-teal-600 text-white text-lg font-semibold rounded-lg shadow-xl hover:bg-teal-700 transition-transform hover:scale-105"
                         variants={{
                             hidden: { y: 20, opacity: 0 },
                             visible: { y: 0, opacity: 1 },

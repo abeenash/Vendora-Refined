@@ -1,71 +1,209 @@
 <?php
 
-use App\Http\Controllers\admin\{DashboardController, ProductController, SalesController, CategoryController, ManageCustomerController,ManageSalespersonController
-    ,ManageUsersController
-    ,ProfileController
-    ,SaleController
-    ,SalesReportController
-    ,SettingsController};
-
-use App\Http\Controllers\auth\{LoginController, LogoutController, RegisterController};
-use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render("IndexPage");
-});
+/*
+|--------------------------------------------------------------------------
+| Controllers
+|--------------------------------------------------------------------------
+*/
+
+// Auth
+use App\Http\Controllers\auth\{
+    LoginController,
+    LogoutController,
+    RegisterController
+};
+use App\Http\Controllers\AuthController;
+
+// Dashboard
+use App\Http\Controllers\Dashboard\DashboardController;
+
+// Admin-only
+use App\Http\Controllers\admin\{
+    CategoryController,
+    ManageUsersController,
+    ProductController as AdminProductController
+};
+
+// Products (accessible based on role)
+use App\Http\Controllers\Products\ProductController;
+
+// Sales
+use App\Http\Controllers\Sales\{
+    SalesController,
+    SaleController,
+    SalesReportController
+};
+
+// Customers
+use App\Http\Controllers\Customer\ManageCustomerController;
+
+// Profile and Settings
+use App\Http\Controllers\Profile\{
+    ProfileController,
+    SettingsController
+};
+
+// Misc
+use App\Http\Controllers\PredictionController;
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/', fn () => Inertia::render('IndexPage'));
+
+Route::post('/predict', [PredictionController::class, 'predict'])->name('predict');
+
+
+/*
+|--------------------------------------------------------------------------
+| Guest Routes (Login/Register)
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware('guest')->group(function () {
-    Route::get('/register', [RegisterController::class, 'index'])->name("register");
-    Route::post('/register', [RegisterController::class, 'store']);
-
-    Route::get('/login', [LoginController::class, 'index'])->name('login');
+    Route::get('/login',  [LoginController::class, 'index'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| Logout
+|--------------------------------------------------------------------------
+*/
+
 Route::post('/logout', [LogoutController::class, 'store'])->name('logout');
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::middleware(['verified'])->group(function () {
 
-        //For PRODUCTS------------
-        // Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-        // Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
-        // Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
-        // Route::post('/products', [ProductController::class, 'store'])->name('products.store');
-        // Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
-        // Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+/*
+|--------------------------------------------------------------------------
+| Authenticated Routes (With Force Password Reset Check)
+|--------------------------------------------------------------------------
+*/
 
-        //NOW LOOK HOW INSANELY just by managing 'resource' helper we can do all the above tasks
-        Route::resource('products', ProductController::class)->names('products');
+Route::middleware(['auth', 'force.password'])->group(function () {
 
-        //For CATEGORY------------
-        Route::resource('categories', CategoryController::class)->names('categories');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
 
-        //For SALES-------------
-        Route::resource('sales', SalesController::class)->names('sales');
 
-        //For CUSTOMERS-------------
-        Route::resource('managecustomers', ManageCustomerController::class)->names('managecustomers');
-        Route::patch('/sales/{sale}/status',[SaleController::class,'updateStatus'])->name('sales.updateStatus');
-    });
-    
+    /*
+    |--------------------------------------------------------------------------
+    | Force Password Reset Routes
+    |--------------------------------------------------------------------------
+    |
+    | These MUST be available to users who haven't verified OR set passwords.
+    |
+    */
+
+    Route::get('/force-password-reset', [AuthController::class, 'forcePasswordReset'])
+        ->name('force-password-reset');
+
+    Route::post('/force-password-reset', [AuthController::class, 'updatePassword']);
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Profile & Settings
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/editprofile', [ProfileController::class, 'index'])->name('editprofile');
-    
-    Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
-
-    // Route::get('/categories', [CategoryController::class, 'index'])->name('categories');
-
-    Route::get('/sale', [SaleController::class, 'index'])->name('sale');
-
-    Route::get('/salesreport', [SalesReportController::class, 'index'])->name("salesreport");
-
-    Route::get('/manageusers', [ManageUsersController::class, 'index'])->name('manageusers');
-
-    Route::get('/managesalesperson', [ManageSalespersonController::class, 'index'])->name('managesalesperson');
+    Route::get('/settings',     [SettingsController::class, 'index'])->name('settings');
 
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Product Routes
+    |--------------------------------------------------------------------------
+    */
+
+    // Everyone can view list
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+
+    // Admin-exclusive product management
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
+        Route::post('/products',        [ProductController::class, 'store'])->name('products.store');
+
+        Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+        Route::put('/products/{product}',      [ProductController::class, 'update'])->name('products.update');
+
+        Route::delete('/products/{product}',   [ProductController::class, 'destroy'])->name('products.destroy');
+    });
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Categories (Admin)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('categories', CategoryController::class)->names('categories');
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sales
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('sales', SalesController::class)->names('sales');
+
+    Route::patch('/sales/{sale}/status', [SaleController::class, 'updateStatus'])
+        ->name('sales.updateStatus');
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customers
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('managecustomers', ManageCustomerController::class)
+        ->names('managecustomers');
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | User Management (Admin Only)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/manageusers',              [ManageUsersController::class, 'index'])->name('manageusers.index');
+        Route::get('/manageusers/create',       [ManageUsersController::class, 'create'])->name('manageusers.create');
+        Route::post('/manageusers',             [ManageUsersController::class, 'store'])->name('manageusers.store');
+
+        Route::get('/manageusers/{manageuser}/edit', [ManageUsersController::class, 'edit'])->name('manageusers.edit');
+        Route::put('/manageusers/{manageuser}',      [ManageUsersController::class, 'update'])->name('manageusers.update');
+
+        Route::delete('/manageusers/{manageuser}',   [ManageUsersController::class, 'destroy'])->name('manageusers.destroy');
+    });
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sales Reports
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/salesreport', [SalesReportController::class, 'index'])
+        ->name('salesreport');
 });

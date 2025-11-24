@@ -44,7 +44,7 @@ export function Cancellation({ saleId, customerName, onClose }) {
                             Confirm Cancellation
                         </h3>
                         <p className="mt-1 text-sm text-gray-600">
-                            Are you sure you want to cancel this sale <strong> {sales.customer_name}</strong> for
+                            Are you sure you want to cancel this sale <strong> {saleId}</strong> for
                             <strong>{customerName}</strong>? 
                         </p>
                         <p className="mt-1 text-red-600 text-sm">

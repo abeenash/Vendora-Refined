@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('sku')->unique();
             $table->text('description');
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->decimal('price',8,2);
+            $table->decimal('price',8,2); 
             $table->integer('stock');
             $table->integer('min_stock')->default(0);
             $table->timestamps();

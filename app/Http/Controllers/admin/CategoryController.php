@@ -17,9 +17,9 @@ class CategoryController extends Controller
             })
             ->orderBy('id', 'desc')
             ->paginate(5)
-            ->withQueryString();
+            ->withQueryString(); 
 
-        return Inertia::render("admin/Categories", [
+        return Inertia::render("categories/Categories", [
             'categories' => $categories,
             'search' => $request->search,
             'flash' => [
@@ -33,7 +33,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
-        return Inertia::render('admin/AddCategories');
+        return Inertia::render('categories/AddCategories');
     }
 
     /**
@@ -64,7 +64,7 @@ class CategoryController extends Controller
      */
     public function edit(Category $category)
     {
-        return Inertia::render('admin/UpdateCategories', [
+        return Inertia::render('categories/UpdateCategories', [
             'category' => $category
         ]);
     }
