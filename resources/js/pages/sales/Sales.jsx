@@ -10,6 +10,7 @@ import { Cancellation } from "../../components/Cancellation";
 const StatusBadge = ({ sale }) => {
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [pendingStatus, setPendingStatus] = useState(null);
+    const { users } = usePage().props;
 
     const handleStatusChange = (e) => {
         const newStatus = e.target.value;
@@ -52,9 +53,8 @@ const StatusBadge = ({ sale }) => {
     if (sale.status === "Cancelled") {
         return (
             <span
-                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    statusStyles[sale.status]
-                }`}
+                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[sale.status]
+                    }`}
             >
                 Cancelled
             </span>
@@ -67,9 +67,8 @@ const StatusBadge = ({ sale }) => {
                 value={sale.status}
                 onChange={handleStatusChange}
                 onClick={(e) => e.stopPropagation()}
-                className={`text-xs font-semibold border rounded-full px-3 py-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 ${
-                    statusStyles[sale.status]
-                }`}
+                className={`text-xs font-semibold border rounded-full px-3 py-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 ${statusStyles[sale.status]
+                    }`}
             >
                 <option value="Pending">Pending</option>
                 <option value="Completed">Completed</option>
@@ -96,7 +95,7 @@ const StatusBadge = ({ sale }) => {
 };
 
 const Sales = () => {
-    const { sales, flash } = usePage().props;
+    const { sales, flash, users } = usePage().props;
     const [search, setSearch] = useState("");
 
     useEffect(() => {
@@ -122,9 +121,16 @@ const Sales = () => {
                         <h1 className="text-3xl font-bold text-gray-800">
                             Sales
                         </h1>
-                        <p className="mt-1 text-gray-500">
-                            Track and manage the sales transactions
-                        </p>
+                        {users.role === 'admin' && (
+                            <p className="mt-1 text-gray-500">
+                                Track and manage the sales transactions
+                            </p>
+                        )}
+                        {users.role === 'salesperson' && (
+                            <p className="mt-1 text-gray-500">
+                                My sales activity
+                            </p>
+                        )}
                     </div>
                     <Link
                         href={route("sales.create")}
@@ -169,7 +175,6 @@ const Sales = () => {
                                         "Items",
                                         "Total Price",
                                         "Status",
-                                        "Actions",
                                     ].map((col) => (
                                         <th
                                             key={col}
@@ -178,6 +183,13 @@ const Sales = () => {
                                             {col}
                                         </th>
                                     ))}
+                                    {users.role==='admin' && (
+                                         <th
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        >
+                                            Actions
+                                        </th>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -227,7 +239,7 @@ const Sales = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center space-x-4">
-                                                <Link
+                                                {/* <Link
                                                     href={route(
                                                         "sales.show",
                                                         sale.id
@@ -235,7 +247,7 @@ const Sales = () => {
                                                     className="text-gray-400 hover:text-cyan-600"
                                                 >
                                                     <Eye className="h-5 w-5" />
-                                                </Link>
+                                                </Link> */}
                                                 {sale.status === "Pending" && (
                                                     <DeleteButton
                                                         onConfirm={() =>
@@ -277,15 +289,13 @@ const Sales = () => {
                                     link.url && router.visit(link.url)
                                 }
                                 disabled={!link.url}
-                                className={`px-3 py-1 border border-gray-300 rounded-lg text-sm ${
-                                    link.active
-                                        ? "bg-teal-600 text-white"
-                                        : "bg-white text-gray-700"
-                                } ${
-                                    !link.url
+                                className={`px-3 py-1 border border-gray-300 rounded-lg text-sm ${link.active
+                                    ? "bg-teal-600 text-white"
+                                    : "bg-white text-gray-700"
+                                    } ${!link.url
                                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                         : "hover:bg-gray-50"
-                                }`}
+                                    }`}
                             ></button>
                         ))}
                     </div>

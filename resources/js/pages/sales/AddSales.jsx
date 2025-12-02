@@ -3,7 +3,6 @@ import { route } from "ziggy-js";
 import { useState, useEffect } from "react";
 import ProductRow from "./ProductRow";
 import CustomerRow from "./CustomerRow";
-import { Check, X } from "lucide-react";
 
 const AddSales = () => {
     const { products = [], customers = [], auth } = usePage().props;
@@ -199,9 +198,9 @@ const AddSales = () => {
                                 />
                             ))}
 
-                            {errors.items_summary && (
-                                <div className="text-red-500 text-sm">
-                                    {errors.items_summary}
+                            {errors.items && (
+                                <div className="text-red-500 text-sm font-medium bg-red-100 p-2 rounded-md">
+                                    {errors.items}
                                 </div>
                             )}
                         </div>

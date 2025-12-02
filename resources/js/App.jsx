@@ -4,6 +4,7 @@ import Layout from '@/layouts/layout'
 import { route } from 'ziggy-js'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+// import "./echo";
 
 window.route = route;
 

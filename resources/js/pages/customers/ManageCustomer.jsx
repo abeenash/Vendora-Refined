@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 
 const ManageCustomer = () => {
-    const { customers, flash } = usePage().props;
+    const { customers, flash, users } = usePage().props;
     const [search, setSearch] = useState("");
 
     useEffect(() => {
@@ -80,14 +80,20 @@ const ManageCustomer = () => {
                                         "Email",
                                         "Phone",
                                         "Address",
-                                        "Assigned Salesperson",
-                                        "Actions"
                                     ].map((col) => (
                                         <th key={col}
                                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             {col}
                                         </th>
                                     ))}
+                                    {users.role === 'admin' && (
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Assigned Salesperson,
+                                        </th>
+                                    )}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -114,21 +120,23 @@ const ManageCustomer = () => {
                                                 {customer.address}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-xs text-gray-500">
-                                                {customer.assigned_salesperson ? (
-                                                    <span className="px-2 py-1 rounded-full bg-teal-100 text-teal-800 text-xs text-center font-medium">
-                                                        {
-                                                            customer.assigned_salesperson
-                                                        }
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-500 text-xs text-center font-medium">
-                                                        Unassigned
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
+                                        {users.role === 'admin' && (
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-xs text-gray-500">
+                                                    {customer.assigned_salesperson ? (
+                                                        <span className="px-2 py-1 rounded-full bg-teal-100 text-teal-800 text-xs text-center font-medium">
+                                                            {
+                                                                customer.assigned_salesperson
+                                                            }
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-500 text-xs text-center font-medium">
+                                                            Unassigned
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        )}
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center space-x-3">
                                                 <Link
@@ -178,8 +186,8 @@ const ManageCustomer = () => {
                                 }
                                 disabled={!link.url}
                                 className={`px-3 py-1 border border-gray-300 rounded-lg text-sm ${link.active
-                                        ? "bg-teal-600 text-white"
-                                        : "bg-white text-gray-700"
+                                    ? "bg-teal-600 text-white"
+                                    : "bg-white text-gray-700"
                                     } ${!link.url
                                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                         : "hover:bg-gray-50"

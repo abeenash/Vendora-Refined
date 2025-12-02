@@ -34,6 +34,6 @@ class AuthController extends Controller
         $user->first_login = false; //the most important step
         $user->save();
 
-        return redirect('/dashboard');
+        return redirect()->route('dashboard.salesperson');
     }
 }

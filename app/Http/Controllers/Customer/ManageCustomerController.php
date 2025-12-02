@@ -3,17 +3,24 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
-use App\Models\User;
+use App\Models\{Customer, User};
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class ManageCustomerController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Customer::class);
+
+        $user = Auth::user();
 
         $customers = Customer::with('user')
+            ->when($user->role !== 'admin', function ($query) use ($user) {
+                //salesperson only sees their own sales
+                $query->where('user_id', $user->id);
+            })
             ->when($request->search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
             })
@@ -44,6 +51,9 @@ class ManageCustomerController extends Controller
 
     public function create()
     {
+
+        $this->authorize('create', Customer::class);
+
         return Inertia::render("customers/AddCustomers", [
             "customers" => Customer::all(),
             "salespersons" => User::where('role', 'salesperson')->get(),
@@ -52,10 +62,12 @@ class ManageCustomerController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Customer::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:customers,email',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'required|string|max:10|unique:customers,phone',
             'address' => 'required|string|max:255',
             'user_id' => 'nullable|exists:users,id',
         ]);
@@ -84,6 +96,8 @@ class ManageCustomerController extends Controller
 
     public function update(Request $request, Customer $managecustomer)
     {
+        $this->authorize('update', $managecustomer);
+
         $request->validate([
             'name' => 'required|string',
             'email' => 'required|email|unique:customers,email,' . $managecustomer->id,
@@ -101,6 +115,8 @@ class ManageCustomerController extends Controller
 
     public function destroy(Customer $managecustomer)
     {
+        $this->authorize('delete', $managecustomer);
+
         $managecustomer->delete();
         return redirect()
             ->back()

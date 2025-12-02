@@ -94,7 +94,19 @@ class ProductController extends Controller
             'min_stock' => 'nullable|integer'
         ]);
 
+        $oldStock = $product->stock; //get the current stock
+
         $product->update($request->all());
+
+        if($oldStock != $product->stock){
+            app(\App\Services\StockService::class)->record(
+                $product,
+                $oldStock,
+                $product->stock,
+                'adjustment',
+                "Manual stock update by admin"
+            );
+        }
 
         return redirect()
             ->route('products.index')

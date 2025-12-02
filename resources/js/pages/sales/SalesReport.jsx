@@ -17,11 +17,14 @@ const SalesReport = () => {
     const [yearOptions, setYearOptions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [chartData, setChartData] = useState([]);
+    const [tableData, setTableData] = useState([]);
     const [summary, setSummary] = useState({
         sales: 0,
         orders: 0,
         product: "-",
     });
+    const [start, setStart] = useState("");
+    const [end, setEnd] = useState("");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -30,10 +33,25 @@ const SalesReport = () => {
             try {
                 let url = "";
 
+                // to stop if custom range dates aren't both filled
+                if (period === "custom" && (!start || !end)) {
+                    setChartData([]);
+                    setTableData([]);
+                    setSummary({
+                        sales: "NPR 0",
+                        orders: 0,
+                        product: "—",
+                    });
+                    setLoading(false);
+                    return;
+                }
+
+
                 if (period === "weekly") url = "/api/sales/weekly";
                 if (period === "monthly")
                     url = `/api/sales/monthly/${selectedYear}`;
                 if (period === "yearly") url = "/api/sales/yearly";
+                if (period === "custom") url = `/api/sales/custom?start=${start}&end=${end}`;
 
                 const res = await axios.get(url);
                 const data = res.data;
@@ -64,7 +82,25 @@ const SalesReport = () => {
                         return item.year.toString();
                     }
 
+                    if (period === "custom" && (!start || !end)) {
+                        setChartData([]);
+                        setTableData([]);
+                        return;
+                    }
+
+
+                    if (period === "custom") {
+                        const d = new Date(item.date);
+                        return d.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                        });
+                    }
+
                     return "";
+
+
                 });
 
                 const values = data.map((item) => Number(item.total));
@@ -91,8 +127,9 @@ const SalesReport = () => {
             }
         };
 
+        if (period === "custom" && (!start || !end)) return;
         fetchData();
-    }, [period, selectedYear]);
+    }, [period, selectedYear, start, end]);
 
     //let frontend fetch the available years
     useEffect(() => {
@@ -105,27 +142,45 @@ const SalesReport = () => {
 
     const exportToPDF = async () => {
         try {
-            const res = await axios.get(`/api/sales/report/pdf/${period}`, {
-                responseType: "blob", //what this means? It is important for file download because it tells axios to expect a binary response
-            });
+            let res;
 
-            //create a blob URL
+            if (period === "custom") {
+                res = await axios.get(
+                    `/api/sales/report/pdf/custom?start=${start}&end=${end}`,
+                    { responseType: "blob" }
+                );
+            } else if (period === "monthly") {
+                res = await axios.get(`/api/sales/report/pdf/monthly/${selectedYear}`,
+                    { responseType: "blob" }
+                );
+            }
+            else {
+                res = await axios.get(
+                    `/api/sales/report/pdf/${period}`,
+                    { responseType: "blob" }
+                );
+            }
+
             const url = window.URL.createObjectURL(new Blob([res.data]));
-
-            //create a temporary <a>
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", `sales_report_${period}.pdf`);
+
+            const fileName =
+                period === "custom"
+                    ? `sales_report_${start}_to_${end}.pdf`
+                    : `sales_report_${period}.pdf`;
+
+            link.setAttribute("download", fileName);
+
             document.body.appendChild(link);
             link.click();
-
-            //Cleanup
             link.remove();
             window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Failed to download PDF:", error);
+            console.error("PDF download failed:", error);
         }
     };
+
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -148,6 +203,7 @@ const SalesReport = () => {
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
                         <option value="yearly">Yearly</option>
+                        <option value="custom">Custom Range</option>
                     </select>
 
                     {/* Year Selector (only shows when monthly is chosen) */}
@@ -164,6 +220,22 @@ const SalesReport = () => {
                             }
                         </select>
                     )}
+
+                    {period === "custom" && (
+                        <div className="flex gap-2">
+                            <input type="date"
+                                value={start}
+                                onChange={(e) => setStart(e.target.value)}
+                                className="px-3 py-2 border rounded"
+                            />
+                            <input type="date"
+                                value={end}
+                                onChange={(e) => setEnd(e.target.value)}
+                                className="px-3 py-2 border rounded"
+                            />
+                        </div>
+                    )}
+
                     <button
                         className="flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
                         onClick={exportToPDF}
@@ -185,21 +257,25 @@ const SalesReport = () => {
                             ? "Weekly Sales Report"
                             : period === "monthly"
                                 ? "Monthly Sales Report"
-                                : "Yearly Sales Report"}
+                                : period == "yearly"
+                                    ? "Yearly Sales Report"
+                                    : ""}
                     </h2>
                 </div>
 
                 <div id="report-content" className="p-6">
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                            <h3 className="text-sm font-medium text-gray-500">
-                                Total Sales
-                            </h3>
-                            <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {summary.sales}
-                            </p>
-                        </div>
+                        {period !== "custom" && (
+                            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                                <h3 className="text-sm font-medium text-gray-500">
+                                    Total Sales
+                                </h3>
+                                <p className="mt-2 text-3xl font-bold text-gray-900">
+                                    {summary.sales}
+                                </p>
+                            </div>
+                        )}
                         {/* <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                             <h3 className="text-sm font-medium text-gray-500">
                                 Total Orders
@@ -218,45 +294,50 @@ const SalesReport = () => {
                         </div> */}
                     </div>
 
+
+
                     {/* Sales Chart */}
-                    <div className="h-96">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData}>
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    stroke="#e5e7eb"
-                                />
-                                <XAxis dataKey="label" />
-                                <YAxis
-                                    tickFormatter={(val) =>
-                                        `NPR ${val.toLocaleString()}`
-                                    }
-                                    width={100}
-                                />
-                                <Tooltip
-                                    formatter={(value) =>
-                                        `NPR ${value.toLocaleString()}`
-                                    }
-                                    cursor={{ fill: "rgba(6, 182, 212, 0.1)" }}
-                                />
-                                <Bar
-                                    dataKey="value"
-                                    fill="rgba(6, 182, 212, 0.6)"
-                                    stroke="rgba(6, 182, 212, 1)"
-                                    radius={[6, 6, 0, 0]}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                    {period !== "custom" && (
+
+                        <div className="h-96">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData}>
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke="#e5e7eb"
+                                    />
+                                    <XAxis dataKey="label" />
+                                    <YAxis
+                                        tickFormatter={(val) =>
+                                            `NPR ${val.toLocaleString()}`
+                                        }
+                                        width={100}
+                                    />
+                                    <Tooltip
+                                        formatter={(value) =>
+                                            `NPR ${value.toLocaleString()}`
+                                        }
+                                        cursor={{ fill: "rgba(6, 182, 212, 0.1)" }}
+                                    />
+                                    <Bar
+                                        dataKey="value"
+                                        fill="rgba(6, 182, 212, 0.6)"
+                                        stroke="rgba(6, 182, 212, 1)"
+                                        radius={[6, 6, 0, 0]}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
 
                     {/* No data state (for future hook-up) */}
-                    {/* {salesData.length === 0 && (
+                    {chartData.length === 0 && (
                         <div className="p-16 text-center text-gray-500">
                             <p>
                                 No sales data available for the selected period.
                             </p>
                         </div>
-                    )} */}
+                    )}
                 </div>
             </div>
         </div>

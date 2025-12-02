@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { DeleteButton } from "../../components/DeleteButton";
 
 const Products = () => {
-    const { products, csrf_token, flash, can } = usePage().props;
+    const { products, csrf_token, flash, can, users } = usePage().props;
     const [search, setSearch] = useState("");
 
     useEffect(() => {
@@ -34,9 +34,16 @@ const Products = () => {
                         <h1 className="text-3xl font-bold text-gray-800">
                             Products
                         </h1>
-                        <p className="mt-1 text-gray-500">
-                            Manage your product inventory
-                        </p>
+                        {users.role === "admin" && (
+                            <p className="mt-1 text-gray-500">
+                                Manage your product inventory
+                            </p>
+                        )}
+                        {users.role === "salesperson" && (
+                            <p className="mt-1 text-gray-500">
+                                See what products are in the run...
+                            </p>
+                        )}
                     </div>
                     {can.create && (
                         <Link
@@ -99,24 +106,30 @@ const Products = () => {
                                     >
                                         Price
                                     </th>
-                                    <th
-                                        scope="col"
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        Stock
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        Status
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        Actions
-                                    </th>
+                                    {users.role === 'admin' && (
+                                        <th
+                                            scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        >
+                                            Stock
+                                        </th>
+                                    )}
+                                    {users.role === "admin" && (
+                                        <th
+                                            scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        >
+                                            Status
+                                        </th>
+                                    )}
+                                    {users.role === "admin" && (
+                                        <th
+                                            scope="col"
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        >
+                                            Actions
+                                        </th>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -148,29 +161,32 @@ const Products = () => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                                             NPR {product.price}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">
-                                                {product.stock}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                Min: {product.min_stock}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span
-                                                className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                    product.stock <=
-                                                    product.min_stock
+                                        {users.role === 'admin' && (
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">
+                                                    {product.stock}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    Min: {product.min_stock}
+                                                </div>
+                                            </td>
+                                        )}
+                                        {users.role === 'admin' && (
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span
+                                                    className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${product.stock <=
+                                                        product.min_stock
                                                         ? "bg-red-100 text-red-800"
                                                         : "bg-teal-100 text-teal-800"
-                                                }`}
-                                            >
-                                                {product.stock <=
-                                                product.min_stock
-                                                    ? "Low Stock"
-                                                    : "In Stock"}
-                                            </span>
-                                        </td>
+                                                        }`}
+                                                >
+                                                    {product.stock <=
+                                                        product.min_stock
+                                                        ? "Low Stock"
+                                                        : "In Stock"}
+                                                </span>
+                                            </td>
+                                        )}
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center space-x-3">
                                                 {can.update && (
@@ -213,11 +229,10 @@ const Products = () => {
                                 onClick={() =>
                                     link.url && router.visit(link.url)
                                 }
-                                className={`px-3 py-1 border border-gray-300 rounded-lg text-sm ${
-                                    link.active
-                                        ? "bg-teal-600 text-white"
-                                        : "bg-white text-gray-700"
-                                } disabled:opacity-50`}
+                                className={`px-3 py-1 border border-gray-300 rounded-lg text-sm ${link.active
+                                    ? "bg-teal-600 text-white"
+                                    : "bg-white text-gray-700"
+                                    } disabled:opacity-50`}
                             />
                         ))}
                     </div>

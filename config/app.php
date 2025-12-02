@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Asia/Kathmandu',
 
     /*
     |--------------------------------------------------------------------------
@@ -122,4 +122,9 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+    // 'options' => [
+    //     'cluster' => 'ap2',
+    //     'useTLS' => true
+    // ],
 ];

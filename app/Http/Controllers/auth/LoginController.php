@@ -36,15 +36,8 @@ class LoginController extends Controller
         $user->last_login = now();
         $user->save();
 
-        return redirect()->route('dashboard');
+        return $user->role === 'admin'
+        ? redirect()->route('dashboard.admin')
+        : redirect()->route('dashboard.salesperson');
     }
-
-    // public function authenticate(Request $request){
-    //     //existing login logic
-    //     Auth::user()->update([
-    //         'last_login'=>now()
-    //     ]);
-
-    //     return redirect()->intended('/dashboard');
-    // }
 }

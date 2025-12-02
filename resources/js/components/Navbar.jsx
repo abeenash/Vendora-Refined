@@ -12,11 +12,6 @@ export default function Navbar() {
 
     //for logout functionality
     const { post } = useForm();
-    // const logout = () => {
-    //     if(confirm("Are you sure you want to logout?")){
-    //         post('/logout');
-    //     }
-    // }
 
     //for displaying authenticated user name as logged in 
     const { auth } = usePage().props;

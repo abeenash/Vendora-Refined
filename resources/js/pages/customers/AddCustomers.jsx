@@ -8,9 +8,9 @@ const AddCustomers = () => {
         phone: "",
         address: "",
         user_id: "",
-    }); 
+    });
 
-    const { customers, salespersons } = usePage().props; 
+    const { users, salespersons } = usePage().props;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -111,33 +111,35 @@ const AddCustomers = () => {
                                     {errors.address}
                                 </div>
                             )}
-                            <div className="mt-6">
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Assigned Salesperson
-                                </label>
-                                <select
-                                    id="add-salesperson"
-                                    value={data.user_id}
-                                    onChange={(e) =>
-                                        setData("user_id", e.target.value)
-                                    }
-                                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan sm:text-sm"
-                                >
-                                    <option value="">
-                                        -- Select Salesperson --
-                                    </option>
-                                    {salespersons.map((salesperson) => (
-                                        <option value={salesperson.id}>
-                                            {salesperson.name}
+                            {users.role === 'admin' && (
+                                <div className="mt-6">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        Assigned Salesperson
+                                    </label>
+                                    <select
+                                        id="add-salesperson"
+                                        value={data.user_id}
+                                        onChange={(e) =>
+                                            setData("user_id", e.target.value)
+                                        }
+                                        className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan sm:text-sm"
+                                    >
+                                        <option value="">
+                                            -- Select Salesperson --
                                         </option>
-                                    ))}
-                                </select>
-                                {errors.user_id && (
-                                    <div className="text-red-500 text-sm">
-                                        {errors.user_id}
-                                    </div>
-                                )}
-                            </div>
+                                        {salespersons.map((salesperson) => (
+                                            <option value={salesperson.id}>
+                                                {salesperson.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.user_id && (
+                                        <div className="text-red-500 text-sm">
+                                            {errors.user_id}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex justify-end gap-4">
