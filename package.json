@@ -23,11 +23,8 @@
         "lucide-react": "^0.536.0",
         "pusher-js": "^8.4.0",
         "react": "^19.1.1",
-        "react-dom": "^19.1.1",
-        "react-router-dom": "^7.7.1",
         "react-toastify": "^11.0.5",
         "recharts": "^3.1.0",
-        "ziggy-js": "^2.5.3",
-        "zustand": "^5.0.7"
+        "ziggy-js": "^2.5.3"
     }
 }

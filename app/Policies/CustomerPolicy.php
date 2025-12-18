@@ -13,14 +13,14 @@ class CustomerPolicy
 
     public function viewAny(User $user)
     {
-        return in_array($user->role, ['admin','salesperson']);
+        return in_array($user->role, ['admin', 'salesperson']);
     }
 
-     /**
-     * Admin can see everything
-     * Salesperson can only see their own customer
-     */
-    public function view(User $user, Customer $customer){
+    public function view(User $user, Customer $customer)
+    {
+        if ($customer->trashed() && $user->role !== 'admin') {
+            return false;
+        }
         return $user->role === 'admin' || $customer->user_id === $user->id;
     }
 
@@ -45,6 +45,9 @@ class CustomerPolicy
      */
     public function delete(User $user, Customer $customer)
     {
+        if ($customer->trashed() && $user->role !== 'admin') {
+            return false;
+        }
         return $user->role === 'admin' || $user->role === 'salesperson';
     }
 }

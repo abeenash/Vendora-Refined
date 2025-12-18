@@ -204,7 +204,8 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     */
 
     Route::resource('managecustomers', ManageCustomerController::class)
-        ->names('managecustomers');
+        ->names('managecustomers')
+        ->withTrashed();
 
 
 
