@@ -142,44 +142,36 @@ const SalesReport = () => {
 
     const exportToPDF = async () => {
         try {
-            let res;
+            let url = "";
 
             if (period === "custom") {
-                res = await axios.get(
-                    `/api/sales/report/pdf/custom?start=${start}&end=${end}`,
-                    { responseType: "blob" }
-                );
+                url = `/api/sales/report/pdf/custom`;
             } else if (period === "monthly") {
-                res = await axios.get(`/api/sales/report/pdf/monthly/${selectedYear}`,
-                    { responseType: "blob" }
-                );
-            }
-            else {
-                res = await axios.get(
-                    `/api/sales/report/pdf/${period}`,
-                    { responseType: "blob" }
-                );
+                url = `/api/sales/report/pdf/monthly/${selectedYear}`;
+            } else {
+                url = `/api/sales/report/pdf/${period}`;
             }
 
-            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const res = await axios.get(url, {
+                responseType: "blob",
+                params: period === "custom" ? { start, end } : {}
+            });
+
+            const blobUrl = window.URL.createObjectURL(res.data);
             const link = document.createElement("a");
-            link.href = url;
-
-            const fileName =
+            link.href = blobUrl;
+            link.download =
                 period === "custom"
                     ? `sales_report_${start}_to_${end}.pdf`
                     : `sales_report_${period}.pdf`;
 
-            link.setAttribute("download", fileName);
-
-            document.body.appendChild(link);
             link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("PDF download failed:", error);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error("PDF download failed:", err);
         }
     };
+
 
 
     return (

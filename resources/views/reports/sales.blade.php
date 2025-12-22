@@ -9,7 +9,7 @@
         <tr>
             <td class="text-center">
                 @if (isset($row->date))
-                    {{ \Carbon\Carbon::parse($row->date)->format('M d, Y D') }}
+                    {{ \Carbon\Carbon::createFromFormat('Y-m-d', $row->date)->format('M d, Y D') }}
                 @elseif(isset($row->month))
                     {{ \Carbon\Carbon::createFromFormat('Y-m', $row->month)->format('M Y') }}
                 @elseif(isset($row->year))

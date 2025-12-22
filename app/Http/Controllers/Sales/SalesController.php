@@ -206,7 +206,7 @@ class SalesController extends Controller
         return DB::table('sales')
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_price) as total'))
             ->where('created_at', '>=', Carbon::now()->subDays(6)) //this will get the last 7 days. Also, here carbon is used to get the current date and time.
-            ->groupBy('date')
+            ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('date')
             ->get();
     }
@@ -219,7 +219,7 @@ class SalesController extends Controller
                 DB::raw('SUM(total_price) as total')
             )
             ->whereYear('created_at', $year)
-            ->groupBy('month')
+            ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
             ->orderBy('month', 'asc')
             ->get();
     }
@@ -231,7 +231,7 @@ class SalesController extends Controller
                 DB::raw('YEAR(created_at) as year'),
                 DB::raw('SUM(total_price) as total')
             )
-            ->groupBy('year')
+            ->groupBy(DB::raw('YEAR(created_at)'))
             ->orderBy('year', 'asc')
             ->get();
     }
@@ -246,7 +246,7 @@ class SalesController extends Controller
             )
             ->whereDate('created_at', '>=', $start)
             ->whereDate('created_at', '<=', $end)
-            ->groupBy('date')
+            ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('date', 'asc')
             ->get();
     }
@@ -293,10 +293,10 @@ class SalesController extends Controller
 
     public function exportSalesPdf($period, $year = null, Request $request)
     {
-        if ($period === "monthly") {
-            $data = $this->fetchMonthlySales($year);
-        } elseif ($period === "weekly") {
+        if ($period === "weekly") {
             $data = $this->fetchWeeklySales();
+        } elseif ($period === "monthly") {
+            $data = $this->fetchMonthlySales($year);
         } elseif ($period === "yearly") {
             $data = $this->fetchYearlySales();
         } elseif ($period === "custom") {
@@ -310,6 +310,9 @@ class SalesController extends Controller
 
         //ensure that all rows behave like objects in Blade
         $data = collect($data)->map(function ($row) {
+            if (isset($row->date)) {
+                $row->date = Carbon::createFromFormat('Y-m-d', $row->date);
+            }
             return (object) $row;
         });
 

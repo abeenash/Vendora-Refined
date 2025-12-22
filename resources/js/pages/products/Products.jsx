@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { debounce } from "lodash";
 import { Plus, Search, Edit } from "lucide-react";
 import { usePage, router, Link } from "@inertiajs/react";
 import { route } from "ziggy-js";
@@ -15,14 +16,20 @@ const Products = () => {
         }
     }, [flash]);
 
+    const debouncedSearch = useCallback(
+        debounce((query) => {
+            router.get(
+                route("products.index"),
+                { search: query },
+                { preserveState: true, replace: true }
+            );
+        }, 300),
+        []
+    );
+
     const handleSearch = (e) => {
         setSearch(e.target.value);
-
-        router.get(
-            route("products.index"), //listing route
-            { search: e.target.value }, //this will pass the search value to the controller
-            { preserveState: true, replace: true } //and then this will
-        );
+        debouncedSearch(e.target.value);
     };
 
     return (

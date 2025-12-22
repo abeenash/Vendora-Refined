@@ -1,6 +1,7 @@
 import { Plus, Search, Eye } from "lucide-react";
 import { Link, usePage, router } from "@inertiajs/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { debounce } from "lodash";
 import { route } from "ziggy-js";
 import { toast } from "react-toastify";
 import { DeleteButton } from "../../components/DeleteButton";
@@ -103,13 +104,20 @@ const Sales = () => {
         if (flash?.error) toast.error(flash.error);
     }, [flash]);
 
+    const debouncedSearch = useCallback(
+        debounce((query) => {
+            router.get(
+                route("sales.index"),
+                { search: query },
+                { preserveState: true, replace: true }
+            );
+        }, 300),
+        []
+    );
+
     const handleSearch = (e) => {
         setSearch(e.target.value);
-        router.get(
-            route("sales.index"),
-            { search: e.target.value },
-            { preserveState: true, replace: true }
-        );
+        debouncedSearch(e.target.value);
     };
 
     return (
@@ -183,8 +191,8 @@ const Sales = () => {
                                             {col}
                                         </th>
                                     ))}
-                                    {users.role==='admin' && (
-                                         <th
+                                    {users.role === 'admin' && (
+                                        <th
                                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                         >
                                             Actions
