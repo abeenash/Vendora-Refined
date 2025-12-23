@@ -15,26 +15,31 @@ const SalespersonDashboard = () => {
     const [activities, setActivities] = useState([]);
 
     useEffect(() => {
-        axios.get("/api/sales/my-stats").then(res => {
-            setStats(res.data);
-        });
+        // axios.get("/api/sales/my-stats").then(res => {
+        //     setStats(res.data);
+        // });
 
-        axios.get("/api/sales/weekly?mine=true").then(res => {
-            setWeeklySales(
-                res.data.map(item => ({
-                    day: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
-                    sales: item.total
-                }))
-            );
-        });
+        axios.get("/api/sales/my-weekly-sales")
+            .then(res => {
+                if (res.data.data) {
+                    setWeeklySales(
+                        res.data.data.map(item => ({
+                            day: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
+                            sales: item.total
+                        }))
+                    );
+                }
+            })
+            .catch(err => console.error("Weekly Sales Error:", err));
 
-        axios.get("/api/sales/top-products?mine=true").then(res => {
-            setTopProducts(res.data);
-        });
+        axios.get("/api/sales/my-top-products")
+            .then(res => {
+                if (res.data.data) {
+                    setTopProducts(res.data.data);
+                }
+            })
+            .catch(err => console.error("Top Products Error:", err));
 
-        axios.get("/api/stock-movements?mine=true").then(res => {
-            setActivities(res.data);
-        });
     }, []);
 
     return (
@@ -47,7 +52,7 @@ const SalespersonDashboard = () => {
                     <span>Recent Activity</span>
                     <History size={16} />
                 </Link>
-                
+
             </div>
 
             {/* PERSONAL INFO CARDS */}

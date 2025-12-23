@@ -46,36 +46,53 @@ class SalespersonDashboardController extends Controller
                 DB::raw('SUM(total_price) as total')
             )
             ->where('user_id', $userId)
-            ->where('created_at', '>=', Carbon::now()->subDays(6))
-            ->groupBy('date')
-            ->orderBy('date')
+            ->whereBetween('created_at', [
+                Carbon::now()->startOfDay()->subDays(6),
+                Carbon::now()->endOfDay(),
+            ])
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->orderBy(DB::raw('DATE(created_at)'), 'asc')
             ->get();
     }
 
     // 3. TOP PRODUCTS SOLD BY SALES PERSON
-    // public function myTopProducts()
-    // {
-    //     $userId = Auth::id();
+    public function fetchMyTopProducts()
+    {
+        $userId = Auth::id();
 
-    //     $data = DB::table('sale_items')
-    //         ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-    //         ->join('products', 'sale_items.product_id', '=', 'products.id')
-    //         ->where('sales.user_id', $userId)
-    //         ->where('sales.created_at', '>=', now()->subDays(30))
-    //         ->select(
-    //             'products.name as product_name',
-    //             DB::raw('SUM(sale_items.quantity) as total_qty')
-    //         )
-    //         ->groupBy('products.name')
-    //         ->orderByDesc('total_qty')
-    //         ->limit(5)
-    //         ->get();
+        $data = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->where('sales.user_id', $userId)
+            ->whereBetween('sales.created_at', [
+                Carbon::now()->startOfDay()->subDays(30),
+                Carbon::now()->endOfDay(),
+            ])
+            ->select(
+                'products.name as product_name',
+                DB::raw('SUM(sale_items.quantity) as total_qty')
+            )
+            ->groupBy('products.name')
+            ->orderByDesc('total_qty')
+            ->limit(5)
+            ->get();
 
-    //     return response()->json($data);
-    // }
+        return $data;
+    }
 
     public function getMyWeeklySales()
     {
-        return response()->json($this->fetchMyWeeklySales());
+        return response()->json([
+            'auth_id' => Auth::id(),
+            'data' => $this->fetchMyWeeklySales()
+        ]);
+    }
+
+    public function getMyTopProducts()
+    {
+        return response()->json([
+            'auth_id' => Auth::id(),
+            'data' => $this->fetchMyTopProducts()
+        ]);
     }
 }

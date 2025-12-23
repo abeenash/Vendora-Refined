@@ -139,15 +139,17 @@ const ManageCustomer = () => {
                                         )}
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center space-x-3">
-                                                <Link
-                                                    href={route(
-                                                        "managecustomers.edit",
-                                                        customer.id
-                                                    )}
-                                                    className="text-gray-400 hover:text-cyan-600"
-                                                >
-                                                    <Edit className="h-5 w-5" />
-                                                </Link>
+                                                {users.role === "admin" && (
+                                                    <Link
+                                                        href={route(
+                                                            "managecustomers.edit",
+                                                            customer.id
+                                                        )}
+                                                        className="text-gray-400 hover:text-cyan-600"
+                                                    >
+                                                        <Edit className="h-5 w-5" />
+                                                    </Link>
+                                                )}
                                                 <DeleteButton
                                                     onConfirm={() =>
                                                         router.delete(

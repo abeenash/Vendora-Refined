@@ -157,6 +157,9 @@ class ManageCustomerController extends Controller
         }
 
         //salesperson just delete which is a soft delete
+        // Unassign the salesperson before soft deleting so admin view shows unassigned
+        $managecustomer->user_id = null;
+        $managecustomer->save();
         $managecustomer->delete();
 
         return redirect()

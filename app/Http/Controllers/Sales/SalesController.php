@@ -206,8 +206,8 @@ class SalesController extends Controller
         return DB::table('sales')
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_price) as total'))
             ->where('created_at', '>=', Carbon::now()->subDays(6)) //this will get the last 7 days. Also, here carbon is used to get the current date and time.
-            ->groupBy('date')
-            ->orderBy('date')
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->orderBy(DB::raw('DATE(created_at)'), 'asc')
             ->get();
     }
 
@@ -306,20 +306,18 @@ class SalesController extends Controller
             ]);
 
             $data = $this->fetchCustomRangeSales($request->start, $request->end);
+        } else {
+            abort(400, 'Invalid report period');
         }
 
-        //ensure that all rows behave like objects in Blade
-        $data = collect($data)->map(function ($row) {
-            return (object) $row;
-        });
-
-        $pdf = PDF::loadview('reports.sales', [
+        $pdf = PDF::loadView('reports.sales', [
             'data' => $data,
             'period' => $period
         ]);
 
         return $pdf->download("sales_report_{$period}.pdf");
     }
+
 
     //function to get the top selling products
     public function topProducts()

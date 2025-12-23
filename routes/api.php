@@ -24,11 +24,12 @@ Route::get('/sales/revenue-category', [SalesController::class, 'revenueByCategor
 Route::get('/sales/compare-monthly', [SalesController::class, 'compareMonthly']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('sales/my-weekly-sales', [SalespersonDashboardController::class, 'getMyWeeklySales']);
+    Route::get('sales/my-top-products', [SalespersonDashboardController::class, 'getMyTopProducts']);
     Route::get('/payments/sale/{sale}', [PaymentController::class, 'paymentsBySale']);
 });
 
 //for salesperson dashboards
 // Route::get('sales/my-stats', [SalespersonDashboardController::class, 'myStats']);
-Route::get('sales/my-weekly-sales', [SalespersonDashboardController::class, 'getMyWeeklySales']);
-// Route::get('sales/top-products', [SalespersonDashboardController::class, 'topProducts']);
+
 // Route::get('stock-movements', [SalespersonDashboardController::class, 'stockMovements']);
