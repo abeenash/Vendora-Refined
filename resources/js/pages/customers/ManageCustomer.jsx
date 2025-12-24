@@ -111,7 +111,7 @@ const ManageCustomer = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-xs text-semibold">
+                                            <div className="text-sm">
                                                 {customer.phone}
                                             </div>
                                         </td>

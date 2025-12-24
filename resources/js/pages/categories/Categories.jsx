@@ -15,7 +15,7 @@ const Categories = () => {
             toast.success(flash.success);
         }
 
-        if(flash?.error){
+        if (flash?.error) {
             toast.error(flash.error);
         }
     }, [flash]);
@@ -79,10 +79,9 @@ const Categories = () => {
                                 {categories.data.map((category, i) => (
                                     <tr key={category.id}>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">{categories.from + i}</div> 
-                                            {/* if we do {i+1}, thenit just resets on every page becuase i is the local index of the current page's loop */}
+                                            <div className="text-sm font-medium text-gray-900">{categories.from + i}</div>
                                         </td>
-                                        {/* what you actually want is a global index that accounts for pagination. Laravel's paginator gives you a "from" property and "to" property to offset the numbering */}
+                                        {/* what actually is to be done is make a global index that accounts for pagination. Laravel's paginator gives you a "from" property and "to" property to offset the numbering */}
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900">{category.name}</div>
                                         </td>

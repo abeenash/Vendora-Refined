@@ -37,29 +37,24 @@ class Sale extends Model
         return $this->hasMany(Payment::class);
     }
 
-    public function updatePaymentStatus()
+    public function recalculatePayments()
     {
-        $totalAmount = $this->total_amount; // your existing column
-        $totalPaid = $this->payments()->sum('amount');
+        return \DB::transaction(function () {
 
-        $this->total_paid = $totalPaid;
+            $totalPaid = $this->payments()->sum('amount');
+            $this->total_paid = $totalPaid;
 
-        if ($totalPaid == 0) {
-            $this->payment_status = 'unpaid';
-        } elseif ($totalPaid < $totalAmount) {
-            $this->payment_status = 'partially_paid';
-        } else {
-            $this->payment_status = 'paid';
-        }
-
-        // overdue logic
-        if ($this->due_date && $this->payment_status !== 'paid') {
-            if (now()->gt($this->due_date)) {
-                $this->payment_status = 'overdue';
+            if ($totalPaid <= 0) {
+                $this->payment_status = 'unpaid';
+            } elseif ($totalPaid >= $this->total_price) {
+                $this->payment_status = 'paid';
+            } elseif ($totalPaid > 0 && $totalPaid < $this->total_price) {
+                $this->payment_status = 'partially_paid';
             }
-        }
 
-        $this->save();
+            $this->save();
+            return $this;
+        });
     }
 
 }

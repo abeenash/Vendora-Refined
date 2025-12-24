@@ -1,9 +1,10 @@
 <?php
 
+use App\Http\Controllers\Payments\ReceivableController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Sales\SalesController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Dashboard\SalespersonDashboardController;
 
 Route::get('/user', function (Request $request) {
@@ -24,12 +25,16 @@ Route::get('/sales/revenue-category', [SalesController::class, 'revenueByCategor
 Route::get('/sales/compare-monthly', [SalesController::class, 'compareMonthly']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
+    //for salesperson dashboards
     Route::get('sales/my-weekly-sales', [SalespersonDashboardController::class, 'getMyWeeklySales']);
     Route::get('sales/my-top-products', [SalespersonDashboardController::class, 'getMyTopProducts']);
-    Route::get('/payments/sale/{sale}', [PaymentController::class, 'paymentsBySale']);
+
+    //payments (API)
+    Route::get('/sales/{sale}/payments', [PaymentController::class, 'index']);
+    Route::post('/sales/{sale}/payments', [PaymentController::class, 'store']);
+    Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify']);
+
+    //Receivables reports
+    Route::get('/reports/receivables/outstanding', [ReceivableController::class, 'index']);
+    Route::get('/reports/receivables/aging', [ReceivableController::class, 'aging']);
 });
-
-//for salesperson dashboards
-// Route::get('sales/my-stats', [SalespersonDashboardController::class, 'myStats']);
-
-// Route::get('stock-movements', [SalespersonDashboardController::class, 'stockMovements']);
