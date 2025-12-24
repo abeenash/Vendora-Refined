@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\admin\StockMovementController;
+use App\Http\Controllers\Payments\PayableController;
+use App\Http\Controllers\Payments\ReceivableController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -46,7 +48,7 @@ use App\Http\Controllers\Profile\{
 };
 
 // Misc
-use App\Http\Controllers\{PredictionController, PaymentController};
+use App\Http\Controllers\Api\PaymentController;
 
 
 
@@ -58,7 +60,7 @@ use App\Http\Controllers\{PredictionController, PaymentController};
 
 Route::get('/', fn() => Inertia::render('IndexPage'));
 
-Route::post('/predict', [PredictionController::class, 'predict'])->name('predict');
+// Route::post('/predict', [PredictionController::class, 'predict'])->name('predict');
 
 
 /*
@@ -236,6 +238,14 @@ Route::middleware(['auth', 'force.password'])->group(function () {
 
     Route::get('/salesreport', [SalesReportController::class, 'index'])
         ->name('salesreport');
+
+    /*
+   |--------------------------------------------------------------------------
+   | Payments (Receivables and Payables)
+   |--------------------------------------------------------------------------
+   */
+    Route::resource('receivables', ReceivableController::class)->names('receivables');
+    Route::resource('payables', PayableController::class)->names('payables');
 });
 
 
