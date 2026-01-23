@@ -7,6 +7,7 @@ import {
     TrendingUpIcon,
     Menu,
     DollarSign,
+    Truck,
 } from "lucide-react";
 import { Link, usePage } from "@inertiajs/react";
 
@@ -15,6 +16,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isCustomerMenuOpen, setIsCustomerMenuOpen] = useState(false);
+    const [isPurchaseMenuOpen, setIsPurchaseMenuOpen] = useState(false);
 
     return (
         <>
@@ -118,6 +120,42 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
                         Sales Report
                     </Link>
                 )}
+                <div>
+                    <button
+                        onClick={() => setIsPurchaseMenuOpen((prev) => !prev)}
+                        className="w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-teal-800 hover:text-white rounded-md transition"
+                    >
+                        <span className="flex items-center">
+                            <Truck className="w-6 h-6 mr-3" />
+                            Purchases
+                        </span>
+                        <ChevronDown
+                            className={`w-4 h-4 arrow-down transform transition-transform ${isPurchaseMenuOpen ? "rotate-180" : ""}`}
+                        />
+                    </button>
+                    {isPurchaseMenuOpen && (
+                        <div className="mt-1 pl-8 space-y-1">
+                            <Link
+                                href="/suppliers"
+                                className="block px-4 py-2 text-sm text-white hover:bg-teal-800 hover:text-white rounded-md"
+                            >
+                                Suppliers
+                            </Link>
+                            <Link
+                                href="/purchase-orders"
+                                className="block px-4 py-2 text-sm text-white hover:bg-teal-800 hover:text-white rounded-md"
+                            >
+                                Purchase Orders
+                            </Link>
+                            <Link
+                                href="/supplier-bills"
+                                className="block px-4 py-2 text-sm text-white hover:bg-teal-800 hover:text-white rounded-md"
+                            >
+                                Supplier Bills
+                            </Link>
+                        </div>
+                    )}
+                </div>
                 <div>
                     <button
                         onClick={() => setIsPaymentMenuOpen((prev) => !prev)}

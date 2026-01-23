@@ -20,20 +20,20 @@ class ManageUsersController extends Controller
             ->orderBy('id', 'desc')
             ->paginate(5)
             ->withQueryString();
-            
-            
-            $users->getCollection()->transform(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'username' => $user->username,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'status' => $user->last_login ? 'Active' : 'Inactive',
-                    'last_login' => $user->last_login ? $user->last_login->diffForHumans() : 'Never',
-                    'raw_last_login' => $user->last_login, //in case we need to display the exact
-                ];
-            });
+
+
+        $users->getCollection()->transform(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'status' => $user->last_login ? 'Active' : 'Inactive',
+                'last_login' => $user->last_login ? $user->last_login->diffForHumans() : 'Never',
+                'raw_last_login' => $user->last_login, //in case we need to display the exact
+            ];
+        });
 
         return Inertia::render('users/ManageUsers', [
             "users" => $users,
@@ -52,22 +52,30 @@ class ManageUsersController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'username' => 'required|string|max:255|unique:users',
-            'email' => 'required|email|unique:users',
-            'phone' => 'required|nullable|string|max:20'
-        ]);
+        $validated = $request->validate(
+            [
+                'name' => 'required|string|max:255',
+                'username' => 'required|string|max:255|unique:users',
+                'email' => 'required|email|unique:users',
+                'phone' => 'required|string|phone:NP|unique:users,phone',
+            ],
+            [
+                'phone.phone' => 'Please enter a valid phone number.',
+                'phone.unique' => 'This phone number is already registered.'
+            ]
+        );
+
+        $validated['phone'] = (string) phone($validated['phone'], 'NP')->formatE164();
 
         //1. Generate password
         $plainPassword = Str::random(10);
 
         //2. Create user
         $user = User::create([
-            'name' => $request->name,
-            'username' => $request->username,
-            'email' => $request->email,
-            'phone' => $request->phone,
+            'name' => $validated['name'],
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
             'role' => 'salesperson',
             'password' => Hash::make($plainPassword),
             'first_login' => true,
@@ -97,14 +105,19 @@ class ManageUsersController extends Controller
 
     public function update(Request $request, User $manageuser)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string',
             'username' => 'required|string|unique:users,username,' . $manageuser->id,
             'email' => 'required|email|unique:users,email,' . $manageuser->id,
-            'phone' => 'required|string|unique:users,phone,' . $manageuser->id,
+            'phone' => 'required|string|phone:NP|unique:users,phone,' . $manageuser->id,
+        ], [
+            'phone.phone' => 'Please enter a valid phone number.',
+            'phone.unique' => 'This phone number is already registered.'
         ]);
 
-        $manageuser->update($request->all());
+        $validated['phone'] = (string) phone($validated['phone'], 'NP')->formatE164();
+
+        $manageuser->update($validated);
 
         return redirect()
             ->route('manageusers.index')

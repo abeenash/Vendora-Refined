@@ -10,7 +10,7 @@ export function formatCurrency(n) {
 }
 
 
-const ReceivableCard = ({ onData }) => {
+const ReceivableCard = () => {
     const [aging, setAging] = useState();
     const { summary } = usePage().props;
 

@@ -1,12 +1,12 @@
 import { AlertTriangle, Trash } from "lucide-react";
 import { useState } from "react";
 
-export function DeleteButton({ onConfirm, attr}) {
+export function DeleteButton({ onConfirm, attr }) {
     const [showModal, setShowModal] = useState(false);
 
     return (
         <>
-            <button 
+            <button
                 onClick={() => setShowModal(true)}
             >
                 <Trash className="h-5 w-5 text-gray-400 hover:text-red-500" />
@@ -20,10 +20,9 @@ export function DeleteButton({ onConfirm, attr}) {
                             Are you sure you want to delete this {attr}?
                         </p>
                         <p className="mt-1 text-red-600">
-                           <AlertTriangle className="h-5 w-5 inline mr-1" /> 
+                            <AlertTriangle className="h-5 w-5 inline mr-1" />
                             This action cannot be undone.
                         </p>
-
                         <div className="flex justify-end gap-3 mt-4">
                             <button
                                 onClick={() => setShowModal(false)}

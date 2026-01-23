@@ -3,6 +3,10 @@
 use App\Http\Controllers\admin\StockMovementController;
 use App\Http\Controllers\Payments\PayableController;
 use App\Http\Controllers\Payments\ReceivableController;
+use App\Http\Controllers\purchases\GrnController;
+use App\Http\Controllers\purchases\PurchaseOrderController;
+use App\Http\Controllers\purchases\SupplierBillController;
+use App\Http\Controllers\purchases\SupplierController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -198,6 +202,28 @@ Route::middleware(['auth', 'force.password'])->group(function () {
         Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])
             ->name('payments.verify');
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Purchases
+    |--------------------------------------------------------------------------
+    */
+    //suppliers
+    Route::resource('suppliers', SupplierController::class)->names('suppliers');
+
+    //purchase orders
+    Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+    Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
+    Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show');
+    Route::patch('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
+    Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
+    Route::post('purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->name('purchase-orders.close');
+
+    // create GRN from PO (goods received)
+    Route::post('purchase-orders/{purchaseOrder}/grn', [GrnController::class, 'store'])->name('purchase-orders.grn');
+
+    //supplier bills
+    Route::get('supplier-bills', [SupplierBillController::class, 'index']);
 
     /*
     |--------------------------------------------------------------------------
