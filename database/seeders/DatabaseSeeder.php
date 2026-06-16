@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Post;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,8 +13,30 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Create Admin User
+        User::updateOrCreate(
+            ['email' => 'admin@vendora.com'],
+            [
+                'name' => 'Admin User',
+                'username' => 'admin',
+                'phone' => '+9779800000000',
+                'role' => 'admin',
+                'password' => Hash::make('password'),
+                'first_login' => false,
+            ]
+        );
 
-       Post::factory(5)->create();
+        // Create Salesperson User
+        User::updateOrCreate(
+            ['email' => 'sales@vendora.com'],
+            [
+                'name' => 'Sales Person',
+                'username' => 'salesperson',
+                'phone' => '+9779811111111',
+                'role' => 'salesperson',
+                'password' => Hash::make('password'),
+                'first_login' => false,
+            ]
+        );
     }
 }
