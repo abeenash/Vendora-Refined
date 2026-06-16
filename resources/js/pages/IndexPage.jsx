@@ -140,13 +140,13 @@ const IndexPage = () => {
                         {features.map((f, i) => (
                             <motion.div
                                 key={i}
-                                className="relative bg-gradient-to-r from-cyan-600 to-teal-600 text-white p-8 rounded-xl border shadow-lg hover:shadow-2xl transition-all duration-300"
+                                className="relative bg-gradient-to-r from-teal-400 to-teal-600 text-white p-8 rounded-xl border shadow-lg hover:shadow-2xl transition-all duration-300"
                                 initial={{ opacity: 0, y: 30 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: i * 0.1 }}
                                 viewport={{ once: true, amount: 0.3 }}
                             >
-                                <div className="absolute -top-3 -left-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+                                <div className="absolute -top-3 -left-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
                                     {i + 1}
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-800">{f.title}</h3>

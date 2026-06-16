@@ -120,7 +120,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
                         Sales Report
                     </Link>
                 )}
-                <div>
+                {/* <div>
                     <button
                         onClick={() => setIsPurchaseMenuOpen((prev) => !prev)}
                         className="w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-teal-800 hover:text-white rounded-md transition"
@@ -155,8 +155,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
                             </Link>
                         </div>
                     )}
-                </div>
-                <div>
+                </div> */}
+                {/* <div>
                     <button
                         onClick={() => setIsPaymentMenuOpen((prev) => !prev)}
                         className="w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-teal-800 hover:text-white rounded-md transition"
@@ -185,7 +185,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
                             </Link>
                         </div>
                     )}
-                </div>
+                </div> */}
                 {users.role === "admin" && (
                     <div>
                         <button

@@ -137,6 +137,10 @@ class ManageCustomerController extends Controller
 
         $managecustomer->update($validated);
 
+        if ($managecustomer->trashed()) {
+            $managecustomer->restore();
+        }
+
         return redirect()
             ->route('managecustomers.index')
             ->with('success', 'Customer updated successfully!');

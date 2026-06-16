@@ -30,20 +30,22 @@ const ProductRow = ({ item, products, onChange, onRemove }) => {
                     type="number"
                     min="1"
                     value={item.quantity}
-                    onChange={(e) =>
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                        const val = e.target.value;
                         onChange({
                             ...item,
-                            quantity: parseInt(e.target.value, 10) || 1,
-                        })
-                    }
-                    className="w-15 border bg-gray-200 hover:bg-gray-300 border-gray-500 rounded-md px-2 py-1 text-center font-semibold"
+                            quantity: val === "" ? "" : Math.max(1, parseInt(val, 10)),
+                        });
+                    }}
+                    className="w-20 border bg-gray-200 hover:bg-gray-300 border-gray-500 rounded-md px-2 py-1 text-center font-semibold"
                 />
                 <button
                     type="button"
                     onClick={() =>
                         onChange({
                             ...item,
-                            quantity: Math.min(item.quantity + 1),
+                            quantity: (Number(item.quantity) || 0) + 1,
                         })
                     }
                     className="px-3 border rounded-md bg-gray-200 hover:bg-gray-300 text-lg font-bold"

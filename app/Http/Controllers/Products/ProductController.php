@@ -20,7 +20,6 @@ class ProductController extends Controller
                     ->orWhere('sku', 'like', "%{$search}%")
                     ->orWhereHas('category', fn($query) => $query->where('name', 'like', "%{$search}%"));
             })
-            // ->get()
             ->orderBy('id', 'desc')
             ->paginate(5)
             ->withQueryString();
