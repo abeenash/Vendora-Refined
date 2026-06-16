@@ -124,13 +124,13 @@ const ManageCustomer = () => {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-xs text-gray-500">
                                                     {customer.assigned_salesperson ? (
-                                                        <span className="px-2 py-1 rounded-full bg-teal-100 text-teal-800 text-xs text-center font-medium">
+                                                        <span className="px-2 py-1 rounded-full bg-teal-100 text-teal-800 text-xs font-semibold text-center font-medium">
                                                             {
                                                                 customer.assigned_salesperson
                                                             }
                                                         </span>
                                                     ) : (
-                                                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-500 text-xs text-center font-medium">
+                                                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-500 text-xs font-semibold text-center font-medium">
                                                             Unassigned
                                                         </span>
                                                     )}

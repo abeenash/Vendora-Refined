@@ -69,9 +69,15 @@ class SalesController extends Controller
     {
         $this->authorize('create', Sale::class);
 
+        $user = Auth::user();
+
+        $customers = $user->role === 'admin'
+            ? Customer::all()
+            : Customer::where('user_id', $user->id)->get();
+
         return Inertia::render("sales/AddSales", [
             "products" => Product::all(),
-            "customers" => Customer::all(),
+            "customers" => $customers,
             "users" => User::all(),
         ]);
     }
