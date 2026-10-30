@@ -4,14 +4,19 @@ import { usePage, router, Link } from "@inertiajs/react";
 import { route } from "ziggy-js";
 import { toast } from "react-toastify";
 import { DeleteButton } from "../../components/DeleteButton";
+import { ListGate, showSearch } from "../../components/EmptyState";
+import { Package } from "lucide-react";
 
 const Products = () => {
-    const { products, csrf_token, flash, can, users } = usePage().props;
-    const [search, setSearch] = useState("");
+    const { products, csrf_token, flash, can, users, search: initialSearch } = usePage().props;
+    const [search, setSearch] = useState(initialSearch || "");
 
     useEffect(() => {
         if (flash?.success) {
             toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
         }
     }, [flash]);
 
@@ -25,8 +30,10 @@ const Products = () => {
         );
     };
 
+    const clearSearch = () => handleSearch({ target: { value: "" } });
+
     return (
-        <div className="space-y-6 p-4 lg:p-2 lg:p-6">
+        <div className="space-y-6 p-4 lg:p-6">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
@@ -56,7 +63,7 @@ const Products = () => {
                 </header>
 
                 {/* Search Bar */}
-                <div className="mb-6">
+                {showSearch(products.data, search) && <div className="mb-6">
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-gray-400" />
@@ -69,9 +76,17 @@ const Products = () => {
                             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
                         />
                     </div>
-                </div>
+                </div>}
 
-                {/* Products Table */}
+                {/* Products Table (or an empty state when there is nothing to list) */}
+                <ListGate
+                    items={products.data}
+                    search={search}
+                    onClearSearch={clearSearch}
+                    empty={can.create
+                        ? { Icon: Package, title: "No products yet", message: "Add your first product to start tracking stock and making sales.", action: { label: "Add your first product", href: route("products.create"), Icon: Plus } }
+                        : { Icon: Package, title: "No products available yet", message: "Your admin hasn't added any products. Once they do, they'll show up here." }}
+                >
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="p-6 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-700">
@@ -187,7 +202,7 @@ const Products = () => {
                                                 </span>
                                             </td>
                                         )}
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        {users.role === "admin" && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center space-x-3">
                                                 {can.update && (
                                                     <Link
@@ -215,7 +230,7 @@ const Products = () => {
                                                     />
                                                 )}
                                             </div>
-                                        </td>
+                                        </td>}
                                     </tr>
                                 ))}
                             </tbody>
@@ -237,6 +252,7 @@ const Products = () => {
                         ))}
                     </div>
                 </div>
+                </ListGate>
             </div>
         </div>
     );

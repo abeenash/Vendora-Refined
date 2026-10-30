@@ -1,4 +1,5 @@
-import { Link, usePage } from "@inertiajs/react";
+import { Link, usePage, router } from "@inertiajs/react";
+import { ListGate } from "../../components/EmptyState";
 import {
     History,
     Package,
@@ -74,6 +75,10 @@ const StockHistory = () => {
             </div>
 
 
+            <ListGate
+                items={logs.data}
+                empty={{ Icon: History, title: "No stock activity yet", message: "Every sale, cancellation, restock and manual adjustment will be logged here automatically." }}
+            >
             <div className="bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -187,6 +192,7 @@ const StockHistory = () => {
                     </div>
                 </div>
             </div>
+            </ListGate>
         </div >
     );
 }
