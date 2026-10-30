@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         //the /api routes use the 'web' group (session auth) directly, see routes/api.php
 
+        //Render (and most hosts) terminate HTTPS at a proxy: trust it so URLs, redirects
+        //and secure cookies use https
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             HandleInertiaRequests::class, //web means this middleware is applied to web routes. And yes! This means all the routes in routes/web.php will have this middleware applied.
         ]);
