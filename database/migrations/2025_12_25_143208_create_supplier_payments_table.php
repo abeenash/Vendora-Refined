@@ -12,13 +12,13 @@ return new class extends Migration {
     {
         Schema::create('supplier_payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('supplier_bill_id')->nullable()->constrained('supplier_bills')->nullOnDelete();
-            $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('supplier_bill_id')->nullable()->constrained('supplier_bills')->restrictOnDelete();
+            $table->foreignId('supplier_id')->constrained()->restrictOnDelete();
             $table->decimal('amount', 14, 2);
             $table->enum('method', ['cash', 'bank_transfer', 'cheque', 'other'])->default('bank_transfer');
             $table->string('reference')->nullable();
             $table->date('paid_at')->nullable();
-            $table->foreignId('recorded_by')->constrained('users');
+            $table->foreignId('recorded_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

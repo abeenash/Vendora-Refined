@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sales', function (Blueprint $table) {
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+            //deleting a salesperson keeps their sales, it just forgets who made them
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
         });
     }
 

@@ -13,7 +13,9 @@ return new class extends Migration {
         Schema::create('grn_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('grn_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+            //the PO line this delivery fulfils
+            $table->foreignId('purchase_order_item_id')->nullable()->constrained('purchase_order_items')->restrictOnDelete();
+            $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->integer('qty_received')->default(0);
             $table->timestamps();
         });

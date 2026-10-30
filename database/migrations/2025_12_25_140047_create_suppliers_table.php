@@ -14,10 +14,11 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->string('contact_person')->nullable();
-            $table->string('email')->nullable();
-            $table->string('phone')->nullable();
+            //unique like SupplierRequest validates (NULLs don't collide in a unique index)
+            $table->string('email')->nullable()->unique();
+            $table->string('phone')->nullable()->unique();
             $table->text('address')->nullable();
-            $table->string('tax_id')->nullable();
+            $table->string('tax_id')->nullable()->unique();
             $table->text('notes')->nullable();
             $table->timestamps();
         });
