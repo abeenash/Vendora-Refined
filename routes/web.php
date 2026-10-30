@@ -7,6 +7,7 @@ use App\Http\Controllers\purchases\GrnController;
 use App\Http\Controllers\purchases\PurchaseOrderController;
 use App\Http\Controllers\purchases\SupplierBillController;
 use App\Http\Controllers\purchases\SupplierController;
+use App\Http\Controllers\purchases\SupplierPaymentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -51,9 +52,6 @@ use App\Http\Controllers\Profile\{
     SettingsController
 };
 
-// Misc
-use App\Http\Controllers\Api\PaymentController;
-
 
 
 /*
@@ -75,7 +73,8 @@ Route::get('/', fn() => Inertia::render('IndexPage'));
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
-    Route::post('/login', [LoginController::class, 'store']);
+    //5 attempts per minute per email+IP to slow down password guessing
+    Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:login');
 });
 
 
@@ -85,7 +84,7 @@ Route::middleware('guest')->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::post('/logout', [LogoutController::class, 'store'])->name('logout');
+Route::post('/logout', [LogoutController::class, 'store'])->middleware('auth')->name('logout');
 
 
 
@@ -106,7 +105,22 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     Route::middleware('role:salesperson')
         ->get('/dashboard/salesperson', [DashboardController::class, 'salesperson'])
         ->name('dashboard.salesperson');
-    // Route::get('/dashboard',[DashboardController::class,'index'])->name('dashboard');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Force Password Reset Routes
+    |--------------------------------------------------------------------------
+    |
+    | The force.password middleware lets these two through for users who
+    | still have to set their password, and sends everyone else away.
+    |
+    */
+
+    Route::get('/force-password-reset', [AuthController::class, 'forcePasswordReset'])
+        ->name('force-password-reset');
+    Route::post('/force-password-reset', [AuthController::class, 'updatePassword'])
+        ->name('force-password-reset.update');
 
 
     /*
@@ -116,7 +130,9 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     */
 
     Route::get('/editprofile', [ProfileController::class, 'index'])->name('editprofile');
+    Route::put('/editprofile', [ProfileController::class, 'update'])->name('editprofile.update');
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::put('/settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
 
 
 
@@ -140,23 +156,6 @@ Route::middleware(['auth', 'force.password'])->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Force Password Reset Routes
-    |--------------------------------------------------------------------------
-    |
-    | These MUST be available to users who haven't verified OR set passwords.
-    |
-    */
-
-    // Force password reset must NOT be blocked by force.password middleware
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/force-password-reset', [AuthController::class, 'forcePasswordReset'])
-            ->name('force-password-reset');
-
-        Route::post('/force-password-reset', [AuthController::class, 'updatePassword']);
-    });
-
 
 
     /*
@@ -165,7 +164,10 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::resource('categories', CategoryController::class)->names('categories');
+    Route::resource('categories', CategoryController::class)
+        ->except(['show'])
+        ->names('categories')
+        ->middleware('role:admin');
 
 
 
@@ -175,7 +177,9 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::resource('sales', SalesController::class)->names('sales');
+    Route::resource('sales', SalesController::class)
+        ->only(['index', 'create', 'store', 'show', 'destroy'])
+        ->names('sales');
 
     Route::patch('/sales/{sale}/status', [SaleController::class, 'updateStatus'])
         ->name('sales.updateStatus');
@@ -187,43 +191,39 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/stock-movements', [StockMovementController::class, 'index'])->name('stock.movements')->middleware(['auth']);
+    Route::get('/stock-movements', [StockMovementController::class, 'index'])->name('stock.movements');
 
 
     /*
     |--------------------------------------------------------------------------
-    | Payment
+    | Purchases (Admin)
     |--------------------------------------------------------------------------
     */
+    Route::middleware('role:admin')->group(function () {
+        //suppliers
+        Route::resource('suppliers', SupplierController::class)
+            ->only(['index', 'store', 'show', 'update', 'destroy'])
+            ->names('suppliers');
 
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
-        Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
-        Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])
-            ->name('payments.verify');
+        //purchase orders
+        Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
+        Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
+        Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show');
+        Route::patch('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
+        Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
+        Route::post('purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->name('purchase-orders.close');
+
+        // create GRN from PO (goods received)
+        Route::post('purchase-orders/{purchaseOrder}/grn', [GrnController::class, 'store'])->name('purchase-orders.grn');
+
+        //supplier bills and the payments made against them
+        Route::get('supplier-bills', [SupplierBillController::class, 'index'])->name('supplier-bills.index');
+        Route::post('supplier-bills', [SupplierBillController::class, 'store'])->name('supplier-bills.store');
+        Route::post('supplier-bills/{supplierBill}/payments', [SupplierPaymentController::class, 'store'])
+            ->name('supplier-bills.payments.store');
+
+        Route::get('payables', [PayableController::class, 'index'])->name('payables.index');
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Purchases
-    |--------------------------------------------------------------------------
-    */
-    //suppliers
-    Route::resource('suppliers', SupplierController::class)->names('suppliers');
-
-    //purchase orders
-    Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
-    Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->name('purchase-orders.store');
-    Route::get('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show');
-    Route::patch('purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])->name('purchase-orders.update');
-    Route::post('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->name('purchase-orders.cancel');
-    Route::post('purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->name('purchase-orders.close');
-
-    // create GRN from PO (goods received)
-    Route::post('purchase-orders/{purchaseOrder}/grn', [GrnController::class, 'store'])->name('purchase-orders.grn');
-
-    //supplier bills
-    Route::get('supplier-bills', [SupplierBillController::class, 'index']);
 
     /*
     |--------------------------------------------------------------------------
@@ -232,6 +232,7 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     */
 
     Route::resource('managecustomers', ManageCustomerController::class)
+        ->except(['show'])
         ->names('managecustomers')
         ->withTrashed();
 
@@ -263,15 +264,13 @@ Route::middleware(['auth', 'force.password'])->group(function () {
     */
 
     Route::get('/salesreport', [SalesReportController::class, 'index'])
+        ->middleware('role:admin')
         ->name('salesreport');
 
     /*
    |--------------------------------------------------------------------------
-   | Payments (Receivables and Payables)
+   | Receivables (admin sees all, salesperson sees their own sales)
    |--------------------------------------------------------------------------
    */
-    Route::resource('receivables', ReceivableController::class)->names('receivables');
-    Route::resource('payables', PayableController::class)->names('payables');
+    Route::get('receivables', [ReceivableController::class, 'index'])->name('receivables.index');
 });
-
-
