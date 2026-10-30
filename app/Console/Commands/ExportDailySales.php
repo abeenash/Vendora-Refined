@@ -32,7 +32,7 @@ class ExportDailySales extends Command
         SUM(sale_items.quantity) AS total_qty_sold
         FROM sales
         JOIN sale_items ON sales.id = sale_items.sale_id
-        WHERE sales.status = 'completed'
+        WHERE sales.status = 'Completed'
         GROUP BY DATE(sales.created_at)
         ORDER BY date
         ");
