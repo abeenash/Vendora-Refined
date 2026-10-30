@@ -16,11 +16,14 @@ return new class extends Migration
             $table->string('name');
             $table->string('sku')->unique();
             $table->text('description');
-            $table->foreignId('category_id')->constrained()->onDelete('cascade');
+            //restrict: a category that still has products can't be deleted
+            $table->foreignId('category_id')->constrained()->restrictOnDelete();
             $table->decimal('price',8,2); 
             $table->integer('stock');
             $table->integer('min_stock')->default(0);
             $table->timestamps();
+            //deleting a product archives it, so past sales and POs keep pointing at a real row
+            $table->softDeletes();
         });
     }
 

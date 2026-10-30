@@ -13,14 +13,14 @@ return new class extends Migration {
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
             $table->string('po_number')->unique();
-            $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('created_by')->constrained('users');
+            $table->foreignId('supplier_id')->constrained()->restrictOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->date('order_date')->nullable();
             $table->date('expected_delivery')->nullable();
             $table->decimal('subtotal', 14, 2)->default(0);
             $table->decimal('tax', 14, 2)->default(0);
             $table->decimal('total', 14, 2)->default(0);
-            $table->enum('status', ['draft', 'ordered', 'partially_received', 'closed', 'cancelled'])->default('draft');
+            $table->enum('status', ['draft', 'ordered', 'partially_received', 'received', 'closed', 'cancelled'])->default('draft');
             $table->timestamps();
         });
     }

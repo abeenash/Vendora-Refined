@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('grns', function (Blueprint $table) {
             $table->id();
             $table->foreignId('purchase_order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('received_by')->constrained('users');
+            $table->foreignId('received_by')->nullable()->constrained('users')->nullOnDelete();
             $table->dateTime('received_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
