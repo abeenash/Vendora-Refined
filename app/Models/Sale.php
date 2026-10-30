@@ -14,8 +14,18 @@ class Sale extends Model
         'customer_id',
         'user_id',
         'total_price',
-        'status'
+        'status',
+        'payment_status',
+        'total_paid',
+        'due_date',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'due_date' => 'date:Y-m-d',
+        ];
+    }
 
     public function items()
     {
@@ -24,7 +34,7 @@ class Sale extends Model
 
     public function customer()
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class)->withTrashed();
     }
 
     public function user()
@@ -37,24 +47,26 @@ class Sale extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function balanceDue(): float
+    {
+        return round((float) $this->total_price - (float) $this->total_paid, 2);
+    }
+
     public function recalculatePayments()
     {
-        return \DB::transaction(function () {
+        $totalPaid = (float) $this->payments()->sum('amount');
+        $this->total_paid = $totalPaid;
 
-            $totalPaid = $this->payments()->sum('amount');
-            $this->total_paid = $totalPaid;
+        if ($totalPaid <= 0) {
+            $this->payment_status = 'unpaid';
+        } elseif ($totalPaid >= (float) $this->total_price) {
+            $this->payment_status = 'paid';
+        } else {
+            $this->payment_status = 'partially_paid';
+        }
 
-            if ($totalPaid <= 0) {
-                $this->payment_status = 'unpaid';
-            } elseif ($totalPaid >= $this->total_price) {
-                $this->payment_status = 'paid';
-            } elseif ($totalPaid > 0 && $totalPaid < $this->total_price) {
-                $this->payment_status = 'partially_paid';
-            }
-
-            $this->save();
-            return $this;
-        });
+        $this->save();
+        return $this;
     }
 
 }
