@@ -16,6 +16,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->seedAccounts();
+
+        if (filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOL)) {
+            $this->call(DemoBusinessSeeder::class);
+        }
+    }
+
+    //the two demo logins (fast: also used on its own by the demo reset, before the slow business data)
+    public function seedAccounts(): void
+    {
         // Admin = the business owner
         User::updateOrCreate(
             ['email' => 'admin@vendora.com'],
@@ -41,9 +51,5 @@ class DatabaseSeeder extends Seeder
                 'first_login' => false,
             ]
         );
-
-        if (filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOL)) {
-            $this->call(DemoBusinessSeeder::class);
-        }
     }
 }
