@@ -59,6 +59,30 @@ class DemoModeTest extends TestCase
         $this->assertTrue(Hash::check('password', $this->admin()->password));
     }
 
+    public function test_logins_exist_even_if_the_business_seed_dies(): void
+    {
+        //what happened on the first deploy: the slow business seed never finished,
+        //and because the logins were in the same transaction nobody could sign in
+        $this->app->bind(\Database\Seeders\DemoBusinessSeeder::class, fn() => new class extends \Database\Seeders\DemoBusinessSeeder {
+            public function run(): void
+            {
+                throw new \RuntimeException('container stopped mid-seed');
+            }
+        });
+
+        try {
+            app(DemoReset::class)->run();
+            $this->fail('the simulated crash should propagate');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('container stopped mid-seed', $e->getMessage());
+        }
+
+        $this->assertTrue(Hash::check('password', $this->admin()->password), 'admin can sign in');
+        $this->assertNotNull(User::where('email', 'sales@vendora.com')->first());
+        $this->assertSame(0, Product::count(), 'half-built business data was rolled back');
+        $this->assertTrue(DemoReset::isStale(), 'so the next run tries again');
+    }
+
     public function test_if_stale_skips_when_already_refreshed_today(): void
     {
         $this->seed(DatabaseSeeder::class);
