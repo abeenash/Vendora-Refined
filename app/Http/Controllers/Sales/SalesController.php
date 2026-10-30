@@ -2,17 +2,23 @@
 
 namespace App\Http\Controllers\Sales;
 
-use App\Events\LowStockEvent;
 use App\Http\Controllers\Controller;
+use App\Services\SalesReport;
+use App\Services\StockService;
+use App\Support\SqlDate;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\{Sale, Product, Customer, User};
 use Illuminate\Support\Facades\{Auth, DB};
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon; //Carbon is a PHP library for working with dates and times
 use Barryvdh\DomPDF\Facade\Pdf; //this is a facade for the dompdf library
 
 class SalesController extends Controller
 {
+    //how long a customer has to pay an invoice when no due date is given
+    private const DEFAULT_PAYMENT_TERM_DAYS = 30;
+
     /**
      * Display a listing of the resource.
      */
@@ -29,8 +35,8 @@ class SalesController extends Controller
             })
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
-                    $q->where('sale_number', 'like', "%{$search}%")
-                        ->orWhereHas('customer', fn($c) => $c->where('name', 'like', "%{$search}%"));
+                    $q->whereLike('sale_number', "%{$search}%")
+                        ->orWhereHas('customer', fn($c) => $c->whereLike('name', "%{$search}%"));
                 });
             })
 
@@ -45,10 +51,11 @@ class SalesController extends Controller
                 'customer_name' => $sale->customer?->name ?? 'Walk-in Customer',
                 'date' => $sale->created_at->format('Y-m-d'),
                 'items_count' => $sale->items->count(),
-                'items_summary' => $sale->items->map(fn($item) => $item->product->name . ' x' . $item->quantity)->join(', '),
+                'items_summary' => $sale->items->map(fn($item) => ($item->product?->name ?? 'Deleted product') . ' x' . $item->quantity)->join(', '),
                 'total_price' => $sale->total_price,
                 'status' => $sale->status,
-
+                'payment_status' => $sale->payment_status,
+                'total_paid' => $sale->total_paid,
             ];
         });
 
@@ -56,9 +63,6 @@ class SalesController extends Controller
         return Inertia::render("sales/Sales", [
             "sales" => $sales,
             "search" => $request->search,
-            "flash" => [
-                'success' => session('success')
-            ]
         ]);
     }
 
@@ -76,9 +80,9 @@ class SalesController extends Controller
             : Customer::where('user_id', $user->id)->get();
 
         return Inertia::render("sales/AddSales", [
-            "products" => Product::all(),
+            "products" => Product::where('stock', '>', 0)->get(),
             "customers" => $customers,
-            "users" => User::all(),
+            "users" => User::select('id', 'name', 'role')->get(),
         ]);
     }
 
@@ -86,35 +90,46 @@ class SalesController extends Controller
      * Store a newly created resource in storage.
      */
 
-    public function store(Request $request)
+    public function store(Request $request, StockService $stock)
     {
 
         $this->authorize('create', Sale::class);
 
+        $user = Auth::user();
+
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
-            'user_id' => 'required|exists:users,id',
+            'customer_id' => 'nullable|exists:customers,id,deleted_at,NULL',
+            'user_id' => 'nullable|exists:users,id',
+            'status' => 'nullable|in:Pending,Completed',
+            'due_date' => 'nullable|date|after_or_equal:today',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_id' => 'required|exists:products,id,deleted_at,NULL',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
+        //a salesperson can only sell to their own customers
+        if (!empty($validated['customer_id']) && $user->role !== 'admin') {
+            $owns = Customer::whereKey($validated['customer_id'])->where('user_id', $user->id)->exists();
+            if (!$owns) {
+                throw ValidationException::withMessages(['customer_id' => 'This customer is not assigned to you.']);
+            }
+        }
 
-            // Generate sale number
-            $nextId = Sale::max('id') + 1;
-            $saleNumber = 'SALE-' . str_pad($nextId, 5, '0', STR_PAD_LEFT);
+        DB::transaction(function () use ($validated, $user, $stock) {
 
             // Create the sale record
             $sale = Sale::create([
-                'sale_number' => $saleNumber,
                 'customer_id' => $validated['customer_id'] ?? null,
-                'user_id' => Auth::user()->role === 'admin'
-                    ? $validated['user_id']
-                    : Auth::id(),
-                'status' => $request->input('status', 'Pending'),
+                'user_id' => $user->role === 'admin'
+                    ? ($validated['user_id'] ?? $user->id)
+                    : $user->id,
+                'status' => $validated['status'] ?? 'Pending',
+                'due_date' => $validated['due_date'] ?? today()->addDays(self::DEFAULT_PAYMENT_TERM_DAYS),
                 'total_price' => 0
             ]);
+
+            //derived from the auto-increment id, so two people saving at once can't get the same number
+            $sale->sale_number = 'SALE-' . str_pad($sale->id, 5, '0', STR_PAD_LEFT);
 
             $total = 0;
 
@@ -125,7 +140,7 @@ class SalesController extends Controller
 
                 // Check if stock is enough
                 if ($item['quantity'] > $product->stock) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
+                    throw ValidationException::withMessages([
                         'items' => ["Insufficient stock for {$product->name} (Available: {$product->stock})"]
                     ]);
                 }
@@ -141,33 +156,19 @@ class SalesController extends Controller
                     'subtotal' => $subtotal
                 ]);
 
-                //stock logging, so old stock info is needed
-                $oldStock = $product->stock;
-
-                // Deduct stock
-                $product->stock -= $item['quantity'];
-                $product->save();
-
-                app(\App\Services\StockService::class)->record(
-                    $product,
-                    $oldStock,
-                    $product->stock,
-                    'sale',
-                    "Stock deducted because of Sale {$sale->sale_number}"
-                );
+                // Deduct stock (and log it)
+                $stock->adjust($product->id, -$item['quantity'], 'sale', "Stock deducted because of Sale {$sale->sale_number}");
 
                 $total += $subtotal;
-
             }
 
             // Update final sale total
-            $sale->update(['total_price' => $total]);
-
-            return redirect()->route('sales.index')
-                ->with('success', 'Sale created successfully.');
-
-
+            $sale->total_price = $total;
+            $sale->save();
         });
+
+        return redirect()->route('sales.index')
+            ->with('success', 'Sale created successfully.');
     }
 
     /**
@@ -176,42 +177,45 @@ class SalesController extends Controller
     public function show(Sale $sale)
     {
         $this->authorize('view', $sale);
-        return $sale->load('items.product', 'customer', 'user');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
+        return $sale->load('items.product', 'customer', 'user', 'payments');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Sale $sale)
+    public function destroy(Sale $sale, StockService $stock)
     {
         $this->authorize('delete', $sale);
 
-        $sale->delete();
+        //money has been received against this sale, so it is part of the books now
+        if ($sale->payments()->exists()) {
+            return redirect()->back()
+                ->with('error', "Sale {$sale->sale_number} has payments recorded and can't be deleted.");
+        }
+
+        DB::transaction(function () use ($sale, $stock) {
+            //a cancelled sale already gave its stock back
+            if ($sale->status !== 'Cancelled') {
+                $stock->restoreSale($sale, 'return', "Stock returned because Sale {$sale->sale_number} was deleted");
+            }
+            $sale->delete();
+        });
+
         return redirect()->back()
             ->with('success', 'Sale deleted successfully.');
     }
 
+    //revenue only counts sales that weren't cancelled
+    private function revenue()
+    {
+        return DB::table('sales')->where('status', '!=', 'Cancelled');
+    }
+
     private function fetchWeeklySales()
     {
-        return DB::table('sales')
+        return $this->revenue()
             ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_price) as total'))
-            ->where('created_at', '>=', Carbon::now()->subDays(6)) //this will get the last 7 days. Also, here carbon is used to get the current date and time.
+            ->where('created_at', '>=', Carbon::now()->startOfDay()->subDays(6)) //this will get the last 7 days. Also, here carbon is used to get the current date and time.
             ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy(DB::raw('DATE(created_at)'), 'asc')
             ->get();
@@ -219,25 +223,29 @@ class SalesController extends Controller
 
     private function fetchMonthlySales($year)
     {
-        return DB::table('sales')
+        $month = SqlDate::yearMonth('created_at');
+
+        return $this->revenue()
             ->select(
-                DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'),
+                DB::raw("$month as month"),
                 DB::raw('SUM(total_price) as total')
             )
             ->whereYear('created_at', $year)
-            ->groupBy('month')
+            ->groupBy(DB::raw($month))
             ->orderBy('month', 'asc')
             ->get();
     }
 
     private function fetchYearlySales()
     {
-        return DB::table('sales')
+        $year = SqlDate::year('created_at');
+
+        return $this->revenue()
             ->select(
-                DB::raw('YEAR(created_at) as year'),
+                DB::raw("$year as year"),
                 DB::raw('SUM(total_price) as total')
             )
-            ->groupBy('year')
+            ->groupBy(DB::raw($year))
             ->orderBy('year', 'asc')
             ->get();
     }
@@ -245,14 +253,14 @@ class SalesController extends Controller
     //for the custom range
     private function fetchCustomRangeSales($start, $end)
     {
-        return DB::table('sales')
+        return $this->revenue()
             ->select(
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('SUM(total_price) as total')
             )
             ->whereDate('created_at', '>=', $start)
             ->whereDate('created_at', '<=', $end)
-            ->groupBy('date')
+            ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('date', 'asc')
             ->get();
     }
@@ -289,7 +297,9 @@ class SalesController extends Controller
 
     public function availableYears()
     {
-        $years = Sale::selectRaw('YEAR(created_at) as year')
+        $year = SqlDate::year('created_at');
+
+        $years = Sale::selectRaw("$year as year")
             ->distinct()
             ->orderBy('year', 'desc')
             ->pluck('year');
@@ -297,31 +307,50 @@ class SalesController extends Controller
         return response()->json($years);
     }
 
-    public function exportSalesPdf($period, $year = null, Request $request)
+    //period + its parameters, validated the same way for the page and the PDF
+    private function reportFor(Request $request, ?string $period = null, ?string $year = null): array
     {
-        if ($period === "monthly") {
-            $data = $this->fetchMonthlySales($year);
-        } elseif ($period === "weekly") {
-            $data = $this->fetchWeeklySales();
-        } elseif ($period === "yearly") {
-            $data = $this->fetchYearlySales();
-        } elseif ($period === "custom") {
-            $request->validate([
-                'start' => 'required|date',
-                'end' => 'required|date|after_or_equal:start'
-            ]);
+        $request->merge(array_filter(['period' => $period, 'year' => $year], fn($v) => $v !== null));
 
-            $data = $this->fetchCustomRangeSales($request->start, $request->end);
-        } else {
-            abort(400, 'Invalid report period');
-        }
-
-        $pdf = PDF::loadView('reports.sales', [
-            'data' => $data,
-            'period' => $period
+        $data = $request->validate([
+            'period' => ['required', 'in:' . implode(',', SalesReport::PERIODS)],
+            'year' => ['nullable', 'integer', 'between:2000,2100'],
+            'start' => ['required_if:period,custom', 'nullable', 'date'],
+            'end' => ['required_if:period,custom', 'nullable', 'date', 'after_or_equal:start'],
+        ], [
+            'start.required_if' => 'Pick a start date for the custom range.',
+            'end.required_if' => 'Pick an end date for the custom range.',
         ]);
 
-        return $pdf->download("sales_report_{$period}.pdf");
+        return SalesReport::make($data['period'], isset($data['year']) ? (int) $data['year'] : null, $data['start'] ?? null, $data['end'] ?? null);
+    }
+
+    //GET /api/sales/report?period=weekly|monthly|yearly|custom&year=&start=&end=
+    public function report(Request $request)
+    {
+        return response()->json($this->reportFor($request));
+    }
+
+    public function exportSalesPdf(Request $request, string $period, ?string $year = null)
+    {
+        //always JSON errors, so the page never saves an HTML error page as a ".pdf"
+        $request->headers->set('Accept', 'application/json');
+        $report = $this->reportFor($request, $period, $year);
+
+        $user = Auth::user();
+        $reference = 'VR-' . now()->format('Ymd-His') . '-' . strtoupper(substr($period, 0, 1));
+
+        $pdf = PDF::loadView('reports.sales', [
+            'report' => $report,
+            'reference' => $reference,
+            'generatedBy' => $user?->name ?? 'Vendora',
+            'generatedAt' => now(),
+        ])
+            ->setPaper('a4')
+            //embed only the glyphs used instead of the whole monospace font (~490 KB -> a few dozen KB)
+            ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->download("vendora_sales_{$period}_{$report['from']}_to_{$report['to']}.pdf");
     }
 
 
@@ -331,6 +360,7 @@ class SalesController extends Controller
         $data = DB::table('sale_items')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->where('sales.status', '!=', 'Cancelled')
             ->where('sales.created_at', '>=', now()->subDays(30))
             ->select(
                 'products.name as product_name',
@@ -351,6 +381,7 @@ class SalesController extends Controller
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->join('categories', 'products.category_id', '=', 'categories.id')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->where('sales.status', '!=', 'Cancelled')
             ->select(
                 'categories.name as category',
                 DB::raw('SUM(sale_items.quantity * sale_items.price) as revenue')
@@ -365,15 +396,12 @@ class SalesController extends Controller
     //function to get the monthly sales comparison (this month vs last month)
     public function compareMonthly()
     {
-        $currentMonth = now()->format('Y-m');
-        $prevMonth = now()->subMonth()->format('Y-m');
-
-        $current = DB::table('sales')
-            ->whereRaw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$currentMonth])
+        $current = $this->revenue()
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->sum('total_price');
 
-        $previous = DB::table('sales')
-            ->whereraw("DATE_FORMAT(created_at, '%Y-%m') = ?", [$prevMonth])
+        $previous = $this->revenue()
+            ->whereBetween('created_at', [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()])
             ->sum('total_price');
 
         return response()->json([
