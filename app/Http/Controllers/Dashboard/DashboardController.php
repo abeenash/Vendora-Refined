@@ -34,8 +34,9 @@ class DashboardController extends Controller
             });
 
         //let's get the sales data
-        $totalSales = Sale::sum('total_price');
-        $todaySales = Sale::whereDate('created_at', today())->sum('total_price');
+        //cancelled sales are not revenue
+        $totalSales = Sale::where('status', '!=', 'Cancelled')->sum('total_price');
+        $todaySales = Sale::where('status', '!=', 'Cancelled')->whereDate('created_at', today())->sum('total_price');
 
         return Inertia::render('dashboard/AdminDashboard', [
             'products' => Product::paginate(10),
