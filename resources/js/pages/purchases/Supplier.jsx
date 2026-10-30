@@ -5,12 +5,13 @@ import { route } from "ziggy-js";
 import { DeleteButton } from "../../components/DeleteButton";
 import { toast } from "react-toastify";
 import { AnimatePresence, motion } from "framer-motion";
+import { ListGate, showSearch } from "../../components/EmptyState";
 
 export default function Suppliers() {
-    const { suppliers, flash } = usePage().props;
+    const { suppliers, flash, search: initialSearch } = usePage().props;
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
-    const [search, setSearch] = useState((suppliers && suppliers.filters?.search) || '');
+    const [search, setSearch] = useState(initialSearch || '');
 
     // Initialize form with defaults
     const form = useForm({
@@ -111,6 +112,7 @@ export default function Suppliers() {
                         <p className="mt-1 text-gray-500">Manage your suppliers and vendor relationships</p>
                     </div>
 
+                    {/* Adding a supplier */}
                     <div className="flex items-center gap-3">
                         <button onClick={openCreate} className="mt-4 sm:mt-0 flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700">
                             <Plus className="mr-2" /> Add Supplier
@@ -118,7 +120,8 @@ export default function Suppliers() {
                     </div>
                 </header>
 
-                <div className="mb-6">
+                {/* Search a supplier based on their name, email, or contact */}
+                {showSearch(suppliers.data, search) && <div className="mb-6">
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-gray-400" />
@@ -131,8 +134,14 @@ export default function Suppliers() {
                             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 sm:text-sm"
                         />
                     </div>
-                </div>
+                </div>}
 
+                <ListGate
+                    items={suppliers.data}
+                    search={search}
+                    onClearSearch={() => handleSearch({ target: { value: "" } })}
+                    empty={{ Icon: Building, title: "No suppliers yet", message: "Add the vendors you buy stock from. You'll pick them when creating purchase orders.", action: { label: "Add your first supplier", onClick: openCreate, Icon: Plus } }}
+                >
                 <div className="bg-white rounded-xl shadow-md">
                     <div className="p-6 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-700">Suppliers in Total ({suppliers.total})</h2>
@@ -186,12 +195,6 @@ export default function Suppliers() {
                                         </td>
                                     </tr>
                                 ))}
-
-                                {suppliers.data.length === 0 && (
-                                    <tr>
-                                        <td colSpan="6" className="px-6 py-4 text-center text-gray-500">No suppliers found</td>
-                                    </tr>
-                                )}
                             </tbody>
                         </table>
                     </div>
@@ -214,6 +217,7 @@ export default function Suppliers() {
                         ))}
                     </div>
                 </div>
+                </ListGate>
             </div>
 
 
