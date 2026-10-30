@@ -16,9 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
+        //the /api routes use the 'web' group (session auth) directly, see routes/api.php
 
         $middleware->web(append: [
             HandleInertiaRequests::class, //web means this middleware is applied to web routes. And yes! This means all the routes in routes/web.php will have this middleware applied.
