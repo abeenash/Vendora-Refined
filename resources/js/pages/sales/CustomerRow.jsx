@@ -4,10 +4,10 @@ const CustomerRow = ({ item, onRemove }) => {
     return (
         <div
             className="flex items-center justify-between border-gray-500 shadow-md
-      bg-gradient-to-r from-cyan-500 to-teal-500 rounded-lg p-3"
+      bg-gradient-to-r from-teal-500 to-teal-600 rounded-lg p-3"
         >
             <div className="flex-1">
-                <p className="font-semibold">{item?.name}</p>
+                <p className="font-medium">{item?.name}</p>
                 {item?.phone && (
                     <p className="text-sm opacity-80">{item.phone}</p>
                 )}

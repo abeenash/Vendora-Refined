@@ -115,7 +115,7 @@ const AddSales = () => {
                                                                         c
                                                                     )
                                                                 }
-                                                                className="px-3 py-2 hover:bg-cyan-50 cursor-pointer transition-colors"
+                                                                className="px-3 py-2 hover:bg-teal-100 cursor-pointer transition-colors"
                                                             >
                                                                 <p className="font-medium text-gray-800">
                                                                     {c.name}
@@ -163,7 +163,7 @@ const AddSales = () => {
                                                 onClick={() =>
                                                     handleAddProduct(product)
                                                 }
-                                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                                className="px-3 py-2 hover:bg-teal-100 cursor-pointer"
                                             >
                                                 {product.name} (NPR{" "}
                                                 {product.price})
