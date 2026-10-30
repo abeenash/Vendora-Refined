@@ -10,14 +10,17 @@ class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
+     *
+     *   php artisan migrate:fresh --seed     -> clean database with the demo business
+     *   SEED_DEMO_DATA=false php artisan db:seed -> only the two login accounts
      */
     public function run(): void
     {
-        // Create Admin User
+        // Admin = the business owner
         User::updateOrCreate(
             ['email' => 'admin@vendora.com'],
             [
-                'name' => 'Admin User',
+                'name' => 'Suman Maharjan',
                 'username' => 'admin',
                 'phone' => '+9779800000000',
                 'role' => 'admin',
@@ -26,11 +29,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Create Salesperson User
+        // Salesperson demo login (DemoBusinessSeeder fills in the rest of the team)
         User::updateOrCreate(
             ['email' => 'sales@vendora.com'],
             [
-                'name' => 'Sales Person',
+                'name' => 'Anish Shrestha',
                 'username' => 'salesperson',
                 'phone' => '+9779811111111',
                 'role' => 'salesperson',
@@ -38,5 +41,9 @@ class DatabaseSeeder extends Seeder
                 'first_login' => false,
             ]
         );
+
+        if (filter_var(env('SEED_DEMO_DATA', true), FILTER_VALIDATE_BOOL)) {
+            $this->call(DemoBusinessSeeder::class);
+        }
     }
 }
