@@ -8,6 +8,8 @@ class Payment extends Model
 {
     use SoftDeletes;
 
+    public const METHODS = ['cash', 'bank_transfer', 'cheque', 'esewa', 'connectips', 'other'];
+
     protected $fillable = [
         'sale_id',
         'amount',
@@ -18,6 +20,13 @@ class Payment extends Model
         'verified_by',
         'notes',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'payment_date' => 'date:Y-m-d',
+        ];
+    }
 
     public function sale()
     {
