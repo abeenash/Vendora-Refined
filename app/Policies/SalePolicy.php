@@ -23,7 +23,24 @@ class SalePolicy
      */
     public function view(User $user, Sale $sale): bool
     {
-        return $user->role === 'admin' || $sale->user_id = $user->id;
+        return $user->role === 'admin' || (int) $sale->user_id === (int) $user->id;
+    }
+
+    /**
+     * Admin can change any sale's status, a salesperson only their own
+     */
+    public function updateStatus(User $user, Sale $sale): bool
+    {
+        return $this->view($user, $sale);
+    }
+
+    /**
+     * Payments can be recorded by the admin or the salesperson who made the sale,
+     * as long as the sale isn't cancelled
+     */
+    public function createPayment(User $user, Sale $sale): bool
+    {
+        return $sale->status !== 'Cancelled' && $this->view($user, $sale);
     }
 
     /**
