@@ -31,6 +31,12 @@ class Supplier extends Model
         return $this->hasMany(SupplierPayment::class);
     }
 
+    //a supplier with purchasing history can't be deleted (the FKs restrict it)
+    public function hasHistory(): bool
+    {
+        return $this->purchaseOrders()->exists() || $this->bills()->exists() || $this->payments()->exists();
+    }
+
     public function outstandingAmount()
     {
         return $this->bills()->whereIn('status', ['unpaid', 'partially_paid'])
