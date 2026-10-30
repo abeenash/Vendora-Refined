@@ -24,7 +24,6 @@ class User extends Authenticatable
         'phone',
         'password',
         'role',
-        'fullname',
         'last_login',
         'first_login',
     ];
@@ -50,6 +49,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'last_login' => 'datetime',
+            //MySQL returns 0/1, Postgres returns true/false; the cast makes both a real bool
+            'first_login' => 'boolean',
         ];
     }
 
@@ -70,5 +71,16 @@ class User extends Authenticatable
 
     public function stockMovements(){
         return $this->hasMany(StockMovement::class);
+    }
+
+    //one of the public demo logins (only matters when DEMO_MODE=true)
+    public function isDemoAccount(): bool
+    {
+        return config('vendora.demo') && in_array($this->email, config('vendora.demo_accounts'), true);
+    }
+
+    public function dashboardRoute(): string
+    {
+        return $this->isAdmin() ? 'dashboard.admin' : 'dashboard.salesperson';
     }
 }
