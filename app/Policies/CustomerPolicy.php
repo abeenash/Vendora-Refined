@@ -45,9 +45,10 @@ class CustomerPolicy
      */
     public function delete(User $user, Customer $customer)
     {
-        if ($customer->trashed() && $user->role !== 'admin') {
-            return false;
+        if ($user->role === 'admin') {
+            return true;
         }
-        return $user->role === 'admin' || $user->role === 'salesperson';
+        //a salesperson can only remove their own (non-archived) customers
+        return !$customer->trashed() && (int) $customer->user_id === (int) $user->id;
     }
 }

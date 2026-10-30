@@ -17,7 +17,7 @@ class PaymentPolicy
     {
         if ($user->role === 'admin')
             return true;
-        return $payment->sale->user_id === $user->id;
+        return $payment->sale?->user_id === $user->id;
     }
 
     // salesperson + admin can record a payment
