@@ -5,6 +5,7 @@ namespace App\Http\Controllers\purchases;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SupplierRequest;
 use App\Models\Supplier;
+use App\Models\SupplierBill;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -16,18 +17,22 @@ class SupplierController extends Controller
         $q = $request->input('search');
 
         $suppliers = Supplier::query()
-            ->when($q, fn($b) => $b->where('name', 'like', "%{$q}%")
-                ->orWhere('email', 'like', "%{$q}%")
-                ->orWhere('phone', 'like', "%{$q}%"))
+            ->when($q, fn($b) => $b->whereLike('name', "%{$q}%")
+                ->orWhereLike('email', "%{$q}%")
+                ->orWhereLike('phone', "%{$q}%"))
             // eager load some useful aggregates
             ->withCount('purchaseOrders') // if relation exists
             ->withSum('bills', 'total_amount') // if bills relation exists
+            //what we still owe this supplier (shown in the "Outstanding" column)
+            ->addSelect(['outstanding_balance' => SupplierBill::selectRaw('COALESCE(SUM(total_amount - paid_amount), 0)')
+                ->whereColumn('supplier_id', 'suppliers.id')])
             ->orderBy('name')
             ->paginate(12)
             ->withQueryString();
 
         return Inertia::render('purchases/Supplier', [
             'suppliers' => $suppliers,
+            'search' => $q,
         ]);
     }
 
@@ -65,7 +70,11 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier)
     {
-        // soft delete or real delete depending on your migration
+        //POs, bills and payments point at the supplier, removing it would orphan the books
+        if ($supplier->hasHistory()) {
+            return redirect()->back()->with('error', "{$supplier->name} has purchase orders or bills and can't be deleted.");
+        }
+
         $supplier->delete();
 
         return redirect()->back()->with('success', 'Supplier deleted.');
