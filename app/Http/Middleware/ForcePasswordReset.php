@@ -16,11 +16,18 @@ class ForcePasswordReset
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && Auth::user()->first_login === 1) {
-            if ($request->path() !== 'force-password-reset') {
-                return redirect()->route('force-password-reset');
-            }
+        $mustReset = Auth::check() && Auth::user()->first_login === true;
+        $onResetPage = $request->routeIs('force-password-reset', 'force-password-reset.update');
+
+        if ($mustReset && !$onResetPage) {
+            return redirect()->route('force-password-reset');
         }
+
+        //someone who already set their password has no reason to be on the reset page
+        if (!$mustReset && $onResetPage && Auth::check()) {
+            return redirect()->route(Auth::user()->dashboardRoute());
+        }
+
         return $next($request);
     }
 }
