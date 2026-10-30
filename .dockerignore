@@ -1,0 +1,23 @@
+# keep the production image small and free of secrets
+.git
+.github
+.vscode
+.idea
+node_modules
+vendor
+public/build
+public/hot
+.env
+.env.*
+!.env.example
+*.sqlite
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*.php
+tests
+ml
+react-starter-nokit
+docker-compose.yml
+Dockerfile
