@@ -10,16 +10,16 @@ export function formatCurrency(n) {
 }
 
 
-const ReceivableCard = () => {
+const ReceivableCard = ({ refreshKey = 0 }) => {
     const [aging, setAging] = useState();
     const { summary } = usePage().props;
 
     useEffect(() => {
-        //fetch aging
+        //fetch aging (again after every recorded payment)
         axios.get('/api/reports/receivables/aging')
             .then(res => setAging(res.data.data || {}))
             .catch(() => setAging({}))
-    }, [])
+    }, [refreshKey])
 
     return (
         <section className="py-4">
