@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { Download, FileBarChart, IndianRupee, ShoppingCart, Receipt, Wallet, CalendarRange } from "lucide-react";
 import axios from "axios";
+import { route } from "ziggy-js";
+import { toast } from "react-toastify";
 import {
     BarChart,
     Bar,
@@ -10,182 +12,85 @@ import {
     ResponsiveContainer,
     CartesianGrid,
 } from "recharts";
+import Card from "../../components/Card";
+import EmptyState from "../../components/EmptyState";
+import { ChartSkeleton } from "../../components/ChartCard";
+import { formatNPR, today } from "../../components/Modal";
+
+const selectClass = "block w-full sm:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm text-gray-700";
+
+// query string for both the JSON report and the PDF
+const params = (period, year, start, end) =>
+    period === "monthly" ? { period, year } : period === "custom" ? { period, start, end } : { period };
 
 const SalesReport = () => {
     const [period, setPeriod] = useState("weekly");
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [yearOptions, setYearOptions] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [chartData, setChartData] = useState([]);
-    const [tableData, setTableData] = useState([]);
-    const [summary, setSummary] = useState({
-        sales: 0,
-        orders: 0,
-        product: "-",
-    });
     const [start, setStart] = useState("");
     const [end, setEnd] = useState("");
+    const [report, setReport] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
+
+    const customIncomplete = period === "custom" && (!start || !end || end < start);
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-
-            try {
-                let url = "";
-
-                // to stop if custom range dates aren't both filled
-                if (period === "custom" && (!start || !end)) {
-                    setChartData([]);
-                    setTableData([]);
-                    setSummary({
-                        sales: "NPR 0",
-                        orders: 0,
-                        product: "—",
-                    });
-                    setLoading(false);
-                    return;
-                }
-
-
-                if (period === "weekly") url = "/api/sales/weekly";
-                if (period === "monthly")
-                    url = `/api/sales/monthly/${selectedYear}`;
-                if (period === "yearly") url = "/api/sales/yearly";
-                if (period === "custom") url = `/api/sales/custom?start=${start}&end=${end}`;
-
-                const res = await axios.get(url);
-                const data = res.data;
-
-                // Transform for recharts
-                const labels = data.map((item) => {
-                    if (period === "weekly") {
-                        const d = new Date(item.date);
-                        return d.toLocaleDateString("en-US", {
-                            weekday: 'short',
-                            day: "numeric",
-                            month: "short",
-                        });
-                    }
-
-                    if (period === "monthly") {
-                        console.log(item.month);
-                        // Parse "2024-07" → show "Jul 2024"
-                        const [year, month] = item.month.split("-");
-                        const dateObj = new Date(year, month - 1);
-                        return dateObj.toLocaleDateString("en-US", {
-                            month: "short",
-                            year: "numeric",
-                        });
-                    }
-
-                    if (period === "yearly") {
-                        return item.year.toString();
-                    }
-
-                    if (period === "custom" && (!start || !end)) {
-                        setChartData([]);
-                        setTableData([]);
-                        return;
-                    }
-
-
-                    if (period === "custom") {
-                        const d = new Date(item.date);
-                        return d.toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                        });
-                    }
-
-                    return "";
-
-
-                });
-
-                const values = data.map((item) => Number(item.total));
-
-                const formattedData = labels.map((label, i) => ({
-                    label,
-                    value: values[i],
-                }));
-
-                setChartData(formattedData);
-
-                // Summary calculations
-                const totalSales = values.reduce((a, b) => a + b, 0);
-
-                setSummary({
-                    sales: `NPR ${totalSales.toLocaleString()}`,
-                    orders: data.length,
-                    product: "—", // leave blank until you design “top product” logic
-                });
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (period === "custom" && (!start || !end)) return;
-        fetchData();
-    }, [period, selectedYear, start, end]);
-
-    //let frontend fetch the available years
-    useEffect(() => {
-        const fetchYears = async () => {
-            const res = await axios.get("/api/sales/available-years");
-            setYearOptions(res.data);
-        };
-        fetchYears();
+        axios.get("/api/sales/available-years").then((res) => setYearOptions(res.data)).catch(() => setYearOptions([]));
     }, []);
 
+    useEffect(() => {
+        if (customIncomplete) {
+            setReport(null);
+            setLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setLoading(true);
+        axios.get("/api/sales/report", { params: params(period, selectedYear, start, end) })
+            .then((res) => !cancelled && setReport(res.data))
+            .catch((err) => !cancelled && toast.error(err.response?.data?.message || "Could not load the report"))
+            .finally(() => !cancelled && setLoading(false));
+        return () => { cancelled = true; };
+    }, [period, selectedYear, start, end]);
+
     const exportToPDF = async () => {
+        setExporting(true);
         try {
-            let res;
+            const { period: p, year } = params(period, selectedYear, start, end);
+            const url = p === "monthly" ? `/api/sales/report/pdf/monthly/${year}` : `/api/sales/report/pdf/${p}`;
+            const res = await axios.get(url, {
+                params: p === "custom" ? { start, end } : {},
+                responseType: "blob",
+            });
 
-            if (period === "custom") {
-                res = await axios.get(
-                    `/api/sales/report/pdf/custom?start=${start}&end=${end}`,
-                    { responseType: "blob" }
-                );
-            } else if (period === "monthly") {
-                res = await axios.get(`/api/sales/report/pdf/monthly/${selectedYear}`,
-                    { responseType: "blob" }
-                );
-            }
-            else {
-                res = await axios.get(
-                    `/api/sales/report/pdf/${period}`,
-                    { responseType: "blob" }
-                );
-            }
-
-            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const href = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
             const link = document.createElement("a");
-            link.href = url;
-
-            const fileName =
-                period === "custom"
-                    ? `sales_report_${start}_to_${end}.pdf`
-                    : `sales_report_${period}.pdf`;
-
-            link.setAttribute("download", fileName);
-
+            link.href = href;
+            link.setAttribute("download", `vendora_sales_${p}_${report.from}_to_${report.to}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
-            window.URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(href);
         } catch (error) {
-            console.error("PDF download failed:", error);
+            //the error body is a Blob (we asked for one), read it to show the real message
+            let message = "PDF download failed";
+            try { message = JSON.parse(await error.response.data.text()).message || message; } catch { /* keep default */ }
+            toast.error(message);
+        } finally {
+            setExporting(false);
         }
     };
 
+    const s = report?.summary;
+    const hasSales = s && s.orders > 0;
+    const noSalesEver = !loading && yearOptions.length === 0;
+    const chartData = (report?.rows || []).map((r) => ({ label: r.label, value: r.revenue, orders: r.orders }));
 
     return (
         <div className="max-w-7xl mx-auto">
             {/* Header Section */}
-            <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+            <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">
                         Sales Report
@@ -194,177 +99,168 @@ const SalesReport = () => {
                         View and export sales performance data
                     </p>
                 </div>
-                <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-                    <select
-                        value={period}
-                        onChange={(e) => setPeriod(e.target.value)}
-                        className="block w-full sm:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
-                    >
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                        <option value="custom">Custom Range</option>
-                    </select>
-
-                    {/* Year Selector (only shows when monthly is chosen) */}
-                    {(period === "monthly") && (
-                        <select value={selectedYear}
-                            onChange={(e) => setSelectedYear(e.target.value)}
-                            className="block w-full sm:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm" >
-                            {yearOptions.map((year) => (
-                                <option key={year} value={year}>
-                                    {year}
-                                </option>
-                            ))
-
-                            }
+                {!noSalesEver && (
+                    <div className="flex flex-wrap items-center gap-3">
+                        <select value={period} onChange={(e) => setPeriod(e.target.value)} className={selectClass}>
+                            <option value="weekly">Last 7 days</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="custom">Custom Range</option>
                         </select>
-                    )}
 
-                    {period === "custom" && (
-                        <div className="flex gap-2">
-                            <input type="date"
-                                value={start}
-                                onChange={(e) => setStart(e.target.value)}
-                                className="px-3 py-2 border rounded"
-                            />
-                            <input type="date"
-                                value={end}
-                                onChange={(e) => setEnd(e.target.value)}
-                                className="px-3 py-2 border rounded"
-                            />
-                        </div>
-                    )}
+                        {period === "monthly" && (
+                            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className={selectClass}>
+                                {(yearOptions.length ? yearOptions : [new Date().getFullYear()]).map((year) => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
+                        )}
 
-                    <button
-                        className="flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
-                        onClick={exportToPDF}
-                    >
-                        <Download className="w-5 h-5 mr-2" />
-                        Export PDF
-                    </button>
-                </div>
-            </header>
-
-            {/* Report Container */}
-            <div className="bg-gray-50 rounded-xl shadow-md">
-                <div className="p-6 border-b border-gray-200">
-                    <h2
-                        id="report-title"
-                        className="text-xl font-semibold text-gray-700"
-                    >
-                        {period === "weekly"
-                            ? "Weekly Sales Report"
-                            : period === "monthly"
-                                ? "Monthly Sales Report"
-                                : period == "yearly"
-                                    ? "Yearly Sales Report"
-                                    : ""}
-                    </h2>
-                </div>
-
-                <div id="report-content" className="p-6">
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        {period !== "custom" && (
-                            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                                <h3 className="text-sm font-medium text-gray-500">
-                                    Total Sales
-                                </h3>
-                                <p className="mt-2 text-3xl font-bold text-gray-900">
-                                    {summary.sales}
-                                </p>
+                        {period === "custom" && (
+                            <div className="flex items-center gap-2">
+                                <input type="date" value={start} max={end || today()} onChange={(e) => setStart(e.target.value)} className={selectClass} aria-label="Start date" />
+                                <span className="text-gray-500">to</span>
+                                <input type="date" value={end} min={start || undefined} max={today()} onChange={(e) => setEnd(e.target.value)} className={selectClass} aria-label="End date" />
                             </div>
                         )}
-                        {/* <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                            <h3 className="text-sm font-medium text-gray-500">
-                                Total Orders
-                            </h3>
-                            <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {summary.orders}
-                            </p>
-                        </div>
-                        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                            <h3 className="text-sm font-medium text-gray-500">
-                                Top Selling Product
-                            </h3>
-                            <p className="mt-2 text-xl font-semibold text-gray-900 truncate">
-                                {summary.product}
-                            </p>
-                        </div> */}
+
+                        <button
+                            className="flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={exportToPDF}
+                            disabled={!hasSales || exporting}
+                            title={hasSales ? "Download this report as a PDF" : "Nothing to export for this period"}
+                        >
+                            <Download className="w-5 h-5 mr-2" />
+                            {exporting ? "Preparing..." : "Export PDF"}
+                        </button>
+                    </div>
+                )}
+            </header>
+
+            {noSalesEver ? (
+                <EmptyState
+                    Icon={FileBarChart}
+                    title="Reports appear after your first sale"
+                    message="Weekly, monthly, yearly and custom-range reports (with PDF export) are built from your sales."
+                    action={{ label: "Record a sale", href: route("sales.create") }}
+                />
+            ) : customIncomplete ? (
+                <EmptyState
+                    compact
+                    Icon={CalendarRange}
+                    title="Pick a date range"
+                    message={start && end && end < start ? "The end date must be on or after the start date." : "Choose a start and an end date above to build the report."}
+                />
+            ) : loading || !report ? (
+                <ChartSkeleton />
+            ) : !hasSales ? (
+                <EmptyState
+                    compact
+                    Icon={FileBarChart}
+                    title="No sales in this period"
+                    message={`Nothing was sold between ${report.range_label}${s.cancelled ? ` (${s.cancelled} cancelled order${s.cancelled > 1 ? "s" : ""} not counted)` : ""}. Try another period.`}
+                />
+            ) : (
+                <div className="space-y-6">
+                    <div>
+                        <h2 className="text-xl font-semibold text-gray-700">{report.title}</h2>
+                        <p className="text-sm text-gray-500">{report.range_label} · cancelled sales excluded</p>
                     </div>
 
-
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Card title="Net Revenue" value={formatNPR(s.revenue)} Icon={IndianRupee} />
+                        <Card title="Orders" value={`${s.orders} · ${s.units} units`} Icon={ShoppingCart} />
+                        <Card title="Avg. Order Value" value={formatNPR(s.avg_order)} Icon={Receipt} />
+                        <Card title="Collected" value={`${s.collection_rate}%`} Icon={Wallet} />
+                    </div>
 
                     {/* Sales Chart */}
-                    {period !== "custom" && (
-
-                        <div className="h-96">
+                    <div className="bg-white rounded-xl shadow-md p-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue by {report.bucket}</h3>
+                        <div className="h-80">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData}>
-                                    <CartesianGrid
-                                        strokeDasharray="3 3"
-                                        stroke="#e5e7eb"
-                                    />
-                                    <XAxis dataKey="label" />
-                                    <YAxis
-                                        tickFormatter={(val) =>
-                                            `NPR ${val.toLocaleString()}`
-                                        }
-                                        width={100}
-                                    />
-                                    <Tooltip
-                                        formatter={(value) =>
-                                            `NPR ${value.toLocaleString()}`
-                                        }
-                                        cursor={{ fill: "rgba(6, 182, 212, 0.1)" }}
-                                    />
-                                    <Bar
-                                        dataKey="value"
-                                        fill="rgba(6, 182, 212, 0.6)"
-                                        stroke="rgba(6, 182, 212, 1)"
-                                        radius={[6, 6, 0, 0]}
-                                    />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                                    <YAxis tickFormatter={(val) => `NPR ${Number(val).toLocaleString()}`} width={100} tick={{ fontSize: 12 }} />
+                                    <Tooltip formatter={(value) => [formatNPR(value), "Revenue"]} cursor={{ fill: "rgba(6, 182, 212, 0.1)" }} />
+                                    <Bar dataKey="value" fill="rgba(6, 182, 212, 0.6)" stroke="rgba(6, 182, 212, 1)" radius={[6, 6, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                    )}
+                    </div>
 
-                    {/* No data state (for future hook-up) */}
-                    {chartData.length === 0 && (
-                        <div className="p-16 text-center text-gray-500">
-                            <p>
-                                No sales data available for the selected period.
-                            </p>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <RankTable title="Top Products" rows={report.top_products} nameKey="name" subKey="sku" countKey="units" countLabel="Units" />
+                        <RankTable title="Top Customers" rows={report.top_customers} nameKey="name" countKey="orders" countLabel="Orders" />
+                    </div>
+
+                    {/* Breakdown */}
+                    <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 flex justify-between">
+                            <h3 className="text-lg font-semibold text-gray-800">Breakdown</h3>
+                            <span className="text-sm text-gray-500">
+                                Collected {formatNPR(s.collected)} · Outstanding {formatNPR(s.outstanding)}
+                            </span>
                         </div>
-                    )}
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        {[report.bucket, "Orders", "Units", "Revenue"].map((col, i) => (
+                                            <th key={col} className={`px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider ${i ? "text-right" : "text-left"}`}>{col}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {report.rows.map((r) => (
+                                        <tr key={r.key} className={r.orders ? "" : "text-gray-400"}>
+                                            <td className="px-6 py-2">{r.label}</td>
+                                            <td className="px-6 py-2 text-right">{r.orders || "-"}</td>
+                                            <td className="px-6 py-2 text-right">{r.units || "-"}</td>
+                                            <td className="px-6 py-2 text-right font-medium">{r.revenue ? formatNPR(r.revenue) : "-"}</td>
+                                        </tr>
+                                    ))}
+                                    <tr className="bg-gray-50 font-semibold text-gray-800">
+                                        <td className="px-6 py-3">Total</td>
+                                        <td className="px-6 py-3 text-right">{s.orders}</td>
+                                        <td className="px-6 py-3 text-right">{s.units}</td>
+                                        <td className="px-6 py-3 text-right">{formatNPR(s.revenue)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
 
+function RankTable({ title, rows, nameKey, subKey, countKey, countLabel }) {
+    return (
+        <div className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">{title}</h3>
+            {rows.length === 0 ? (
+                <p className="text-sm text-gray-500">No data for this period.</p>
+            ) : (
+                <ol className="divide-y divide-gray-100">
+                    {rows.map((r, i) => (
+                        <li key={i} className="py-2 flex items-center gap-3 text-sm">
+                            <span className="w-6 h-6 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                            <span className="flex-1 min-w-0">
+                                <span className="block truncate text-gray-800 font-medium">{r[nameKey]}</span>
+                                {subKey && <span className="block text-xs text-gray-400">{r[subKey]}</span>}
+                            </span>
+                            <span className="text-gray-500 whitespace-nowrap">{r[countKey]} {countLabel.toLowerCase()}</span>
+                            <span className="w-32 text-right font-medium text-gray-800 whitespace-nowrap">{formatNPR(r.revenue)}</span>
+                        </li>
+                    ))}
+                </ol>
+            )}
+        </div>
+    );
+}
+
 export default SalesReport;
-
-
-//-----------------PREVIOUSLY USED DUMMY DATA-------------------------
-// const salesData = {
-//     daily: {
-//         title: "Daily Sales Report",
-//         labels: ["9am", "11am", "1pm", "3pm", "5pm", "7pm"],
-//         data: [150, 220, 300, 180, 400, 250.75],
-//         summary: { sales: "NPR 1,500.75", orders: "15", product: "Wireless Headphones" },
-//     },
-//     weekly: {
-//         title: "Weekly Sales Report",
-//         labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-//         data: [1200, 1500, 1100, 1800, 2200, 2500, 1700],
-//         summary: { sales: "NPR 12,000.00", orders: "98", product: "Coffee Mug" },
-//     },
-//     monthly: {
-//         title: "Monthly Sales Report",
-//         labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
-//         data: [45000, 52000, 61000, 55000, 72000, 68000, 75000, 81000],
-//         summary: { sales: "NPR 510,000.00", orders: "1,204", product: "Notebook" },
-//     },
-// }; was frontend data before

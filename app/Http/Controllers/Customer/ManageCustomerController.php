@@ -25,7 +25,7 @@ class ManageCustomerController extends Controller
                 $query->where('user_id', $user->id);
             })
             ->when($request->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%");
+                $query->whereLike('name', "%{$search}%");
             })
             ->orderBy('id', 'desc')
             ->paginate(5)
@@ -47,9 +47,6 @@ class ManageCustomerController extends Controller
         return Inertia::render("customers/ManageCustomer", [
             "customers" => $customers,
             "search" => $request->search,
-            "flash" => [
-                'success' => session('success')
-            ],
         ]);
     }
 
@@ -74,7 +71,7 @@ class ManageCustomerController extends Controller
                 'email' => 'required|email|unique:customers,email',
                 'phone' => 'required|string|phone:NP|unique:customers,phone',
                 'address' => 'required|string|max:255',
-                'user_id' => 'nullable|exists:users,id',
+                'user_id' => 'nullable|exists:users,id,role,salesperson',
             ],
             [
                 'phone.phone' => 'Please enter a valid phone number.',
@@ -106,6 +103,8 @@ class ManageCustomerController extends Controller
 
     public function edit(Customer $managecustomer)
     {
+        $this->authorize('update', $managecustomer);
+
         return Inertia::render("customers/UpdateCustomers", [
             "customer" => [
                 "id" => $managecustomer->id,
@@ -126,14 +125,13 @@ class ManageCustomerController extends Controller
         $validated = $request->validate([
             'name' => 'required|string',
             'email' => 'required|email|unique:customers,email,' . $managecustomer->id,
-            'phone' => 'nullable|string|phone:NP|unique:customers,phone,' . $managecustomer->id,
+            //the column is NOT NULL, so an empty phone used to crash with a database error
+            'phone' => 'required|string|phone:NP|unique:customers,phone,' . $managecustomer->id,
             'address' => 'nullable|string',
-            'user_id' => 'nullable|exists:users,id',
+            'user_id' => 'nullable|exists:users,id,role,salesperson',
         ]);
 
-        if (!empty($validated['phone'])) {
-            $validated['phone'] = (string) phone($validated['phone'], 'NP')->formatE164();
-        }
+        $validated['phone'] = (string) phone($validated['phone'], 'NP')->formatE164();
 
         $managecustomer->update($validated);
 
@@ -153,6 +151,15 @@ class ManageCustomerController extends Controller
         $user = Auth::user();
 
         if ($user->role === 'admin') {
+            //a customer on past invoices is archived, not erased, so the invoices keep their name
+            if ($managecustomer->sales()->exists()) {
+                $managecustomer->delete();
+
+                return redirect()
+                    ->back()
+                    ->with('success', 'Customer named ' . $managecustomer->name . ' has sales history, so they were archived instead of deleted.');
+            }
+
             $managecustomer->forceDelete();
 
             return redirect()

@@ -4,14 +4,19 @@ import { DeleteButton } from "../../components/DeleteButton";
 import { route } from "ziggy-js";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { ListGate, showSearch } from "../../components/EmptyState";
+import { Users } from "lucide-react";
 
 const ManageCustomer = () => {
-    const { customers, flash, users } = usePage().props;
-    const [search, setSearch] = useState("");
+    const { customers, flash, users, search: initialSearch } = usePage().props;
+    const [search, setSearch] = useState(initialSearch || "");
 
     useEffect(() => {
         if (flash?.success) {
             toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
         }
     }, [flash]);
 
@@ -47,7 +52,7 @@ const ManageCustomer = () => {
                 </header>
 
                 {/* <!-- Search Bar --> */}
-                <div className="mb-6">
+                {showSearch(customers.data, search) && <div className="mb-6">
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-gray-400" />
@@ -60,9 +65,20 @@ const ManageCustomer = () => {
                             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
                         />
                     </div>
-                </div>
+                </div>}
 
                 {/* <!-- Customers Table Container --> */}
+                <ListGate
+                    items={customers.data}
+                    search={search}
+                    onClearSearch={() => handleSearch({ target: { value: "" } })}
+                    empty={{
+                        Icon: Users,
+                        title: users.role === "admin" ? "No customers yet" : "You have no customers yet",
+                        message: "Add a customer so you can attach them to sales and track what they owe.",
+                        action: { label: "Add your first customer", href: route("managecustomers.create"), Icon: Plus },
+                    }}
+                >
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="p-6 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-700">
@@ -165,16 +181,6 @@ const ManageCustomer = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {customers.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colspan="6"
-                                            className="px-6 py-4 text-center text-gray-500"
-                                        >
-                                            No Customers Found
-                                        </td>
-                                    </tr>
-                                )}
                             </tbody>
                         </table>
                     </div>
@@ -198,6 +204,7 @@ const ManageCustomer = () => {
                         ))}
                     </div>
                 </div>
+                </ListGate>
             </div>
         </div>
     );

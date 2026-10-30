@@ -1,5 +1,5 @@
-import { useForm, Link, usePage } from '@inertiajs/react';
-import { Box, BoxIcon } from 'lucide-react';
+import { useForm, Link, usePage, router } from '@inertiajs/react';
+import { Box, BoxIcon, LogIn, Sparkles } from 'lucide-react';
 
 
 const Login = () => {
@@ -11,6 +11,9 @@ const Login = () => {
     const { props } = usePage();
 
     const status = props?.flash?.status;
+    const demo = props?.demo; //only set when DEMO_MODE=true
+
+    const loginAs = (email) => router.post('/login', { email, password: demo.password });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -91,6 +94,36 @@ const Login = () => {
                         </div>
                     </form>
                 </div>
+
+                {/* public demo: one-click logins */}
+                {demo && (
+                    <div className="mt-4 bg-white p-6 rounded-xl shadow-md border border-teal-200">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Sparkles className="w-5 h-5 text-teal-600" />
+                            <h2 className="font-semibold text-gray-800">Try the live demo</h2>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Sagarmatha IT &amp; Mobile Distributors, a sample wholesale business with six months of sales,
+                            stock and payments. Explore freely: everything resets every night.
+                        </p>
+                        <div className="space-y-2">
+                            {demo.accounts.map((account) => (
+                                <button
+                                    key={account.email}
+                                    type="button"
+                                    onClick={() => loginAs(account.email)}
+                                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-gray-200 hover:border-teal-300 hover:bg-teal-50 transition-colors text-left"
+                                >
+                                    <span>
+                                        <span className="block text-sm font-medium text-gray-800">{account.label}</span>
+                                        <span className="block text-xs text-gray-500 font-mono">{account.email} · {demo.password}</span>
+                                    </span>
+                                    <LogIn className="w-5 h-5 text-teal-600" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -5,15 +5,20 @@ import { route } from "ziggy-js";
 import { toast } from "react-toastify";
 import PasswordModal from "../../components/PasswordModal";
 import { DeleteButton } from "../../components/DeleteButton";
+import { ListGate, showSearch } from "../../components/EmptyState";
+import { UserPlus } from "lucide-react";
 
 const ManageUsers = () => {
-    const { users, generatedPassword, flash } = usePage().props; //this will get the users from the props
+    const { users, generatedPassword, flash, search: initialSearch } = usePage().props; //this will get the users from the props
     const [showModal, setShowModal] = useState(!!generatedPassword);
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(initialSearch || "");
 
     useEffect(() => {
         if (flash?.success) {
             toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
         }
     }, [flash]);
 
@@ -50,7 +55,7 @@ const ManageUsers = () => {
                 </header>
 
                 {/* <!-- Search Bar --> */}
-                <div className="mb-6">
+                {showSearch(users.data, search) && <div className="mb-6">
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-gray-400" />
@@ -63,7 +68,7 @@ const ManageUsers = () => {
                             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
                         />
                     </div>
-                </div>
+                </div>}
 
                 <div className="mt-4">
                     {showModal && (
@@ -74,7 +79,13 @@ const ManageUsers = () => {
                     )}
                 </div>
 
-                {/* <!-- Products Table Container --> */}
+                {/* <!-- Users Table Container --> */}
+                <ListGate
+                    items={users.data}
+                    search={search}
+                    onClearSearch={() => handleSearch({ target: { value: "" } })}
+                    empty={{ Icon: UserPlus, title: "No salespeople yet", message: "Add a salesperson account. They get a one-time password and set their own on first login.", action: { label: "Add your first salesperson", href: route("manageusers.create"), Icon: Plus } }}
+                >
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="p-6 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-700">
@@ -168,16 +179,6 @@ const ManageUsers = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                 {users.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colspan="6"
-                                            className="px-6 py-4 text-center text-gray-500"
-                                        >
-                                            No Customers Found
-                                        </td>
-                                    </tr>
-                                )}
                             </tbody>
                         </table>
                     </div>
@@ -201,6 +202,7 @@ const ManageUsers = () => {
                         ))}
                     </div>
                 </div>
+                </ListGate>
             </div>
         </div>
     );

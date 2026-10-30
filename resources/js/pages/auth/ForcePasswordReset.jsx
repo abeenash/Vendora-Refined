@@ -35,7 +35,7 @@ const ForcePasswordReset = () => {
             <div className="animate-fade-in bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-4 border-teal-600 transition duration-500 hover:shadow-3xl">
 
                 <div className="text-center mb-6">
-                    <h2 className="text-3xl font-extrabold text-gray-800">
+                    <h2 className="text-3xl font-semibold text-gray-800">
                         Welcome!
                     </h2>
                     <p className="text-gray-500 mt-1">

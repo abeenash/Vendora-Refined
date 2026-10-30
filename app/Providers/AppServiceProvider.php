@@ -3,7 +3,10 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
@@ -43,8 +46,22 @@ class AppServiceProvider extends ServiceProvider
             return csrf_token();
         });
 
+        //public demo: the login page shows these accounts, the navbar shows a "demo" badge
+        Inertia::share('demo', fn() => config('vendora.demo') ? [
+            'password' => config('vendora.demo_password'),
+            'accounts' => [
+                ['label' => 'Admin (owner)', 'email' => 'admin@vendora.com'],
+                ['label' => 'Salesperson', 'email' => 'sales@vendora.com'],
+            ],
+        ] : null);
+
         Gate::define('viewAny', function (User $user) {
             return in_array($user->role, ['admin', 'salesperson']);
+        });
+
+        //used by the POST /login route
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinute(5)->by(strtolower((string) $request->input('email')) . '|' . $request->ip());
         });
     }
 }

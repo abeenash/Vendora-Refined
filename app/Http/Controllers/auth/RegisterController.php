@@ -22,7 +22,6 @@ class RegisterController extends Controller
             'username' => 'required|string|max:255|unique:users,username',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|confirmed|min:8|regex:/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/',
-            'role' => 'required|string',
         ]);
 
         $user = User::create([
@@ -30,11 +29,12 @@ class RegisterController extends Controller
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            //never trust a role sent by the browser, otherwise anyone could register as admin
+            'role' => 'salesperson',
         ]);
 
-        Auth::attempt($request->only('email', 'password'));
+        Auth::login($user);
 
-        return redirect('/dashboard');
+        return redirect()->route($user->dashboardRoute());
     }
 }

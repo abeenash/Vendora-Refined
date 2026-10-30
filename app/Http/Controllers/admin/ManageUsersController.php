@@ -15,7 +15,7 @@ class ManageUsersController extends Controller
     {
         $users = User::where('role', 'salesperson')
             ->when($request->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%");
+                $query->whereLike('name', "%{$search}%");
             })
             ->orderBy('id', 'desc')
             ->paginate(5)
@@ -39,9 +39,6 @@ class ManageUsersController extends Controller
             "users" => $users,
             "search" => $request->search,
             "generatedPassword" => session('generatedPassword'),
-            "flash" => [
-                'success' => session('success')
-            ],
         ]);
     }
 
@@ -90,8 +87,24 @@ class ManageUsersController extends Controller
             ]);
     }
 
+    //this screen only manages salespeople; admins can't be edited or deleted through it
+    private function ensureSalesperson(User $user): void
+    {
+        abort_unless($user->role === 'salesperson', 403, 'Only salesperson accounts can be managed here.');
+    }
+
+    //the shared demo logins must keep working for the next visitor
+    private function demoGuard(User $user)
+    {
+        return $user->isDemoAccount()
+            ? redirect()->route('manageusers.index')->with('error', "{$user->name} is a public demo login, so it can't be changed or deleted here. Add a new salesperson to try this out.")
+            : null;
+    }
+
     public function edit(User $manageuser)
     {
+        $this->ensureSalesperson($manageuser);
+
         return Inertia::render('users/UpdateUser', [
             "user" => [
                 "id" => $manageuser->id,
@@ -105,6 +118,11 @@ class ManageUsersController extends Controller
 
     public function update(Request $request, User $manageuser)
     {
+        $this->ensureSalesperson($manageuser);
+        if ($blocked = $this->demoGuard($manageuser)) {
+            return $blocked;
+        }
+
         $validated = $request->validate([
             'name' => 'required|string',
             'username' => 'required|string|unique:users,username,' . $manageuser->id,
@@ -126,9 +144,15 @@ class ManageUsersController extends Controller
 
     public function destroy(User $manageuser)
     {
+        $this->ensureSalesperson($manageuser);
+        if ($blocked = $this->demoGuard($manageuser)) {
+            return $blocked;
+        }
+
+        //their sales, payments and stock logs stay; the foreign keys just set the user to NULL
         $manageuser->delete();
         return redirect()
             ->back()
-            ->with('success', 'User named' . $manageuser->name . ' has been deleted!');
+            ->with('success', 'User named ' . $manageuser->name . ' has been deleted!');
     }
 }

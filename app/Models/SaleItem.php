@@ -20,7 +20,8 @@ class SaleItem extends Model
         return $this->belongsTo(Sale::class);
     }
 
+    //archived products must still show up on old invoices
     public function product(){
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 }

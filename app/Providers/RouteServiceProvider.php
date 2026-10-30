@@ -21,6 +21,11 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        //ids are numbers; otherwise Postgres throws "invalid input syntax for type bigint" (a 500) instead of a 404
+        foreach (['product', 'category', 'sale', 'supplier', 'purchaseOrder', 'supplierBill', 'payment', 'manageuser', 'managecustomer'] as $param) {
+            Route::pattern($param, '[0-9]+');
+        }
+
         Route::bind('managecustomer', function ($value) {
             return Customer::withTrashed()->where('id', $value)->firstOrFail();
         });

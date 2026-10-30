@@ -12,9 +12,10 @@ return new class extends Migration {
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            //a sale with payments can't be deleted
             $table->foreignId('sale_id')
                 ->constrained('sales')
-                ->onDelete('cascade');
+                ->restrictOnDelete();
 
             $table->decimal('amount', 10, 2);
 
@@ -32,8 +33,9 @@ return new class extends Migration {
 
             // who recorded it (salesperson or admin)
             $table->foreignId('recorded_by')
+                ->nullable()
                 ->constrained('users')
-                ->onDelete('cascade');
+                ->nullOnDelete();
 
             // only admin sets this
             $table->foreignId('verified_by')

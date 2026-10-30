@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* light/dark colours for the whole app live here */
+@import './theme.css';
 
 @layer base {
     html {
@@ -16,8 +18,6 @@ input[type=number]{
     -moz-appearance: textfield;
 }
 
-
-@custom-variant dark (&:where(.dark, .dark *));
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';

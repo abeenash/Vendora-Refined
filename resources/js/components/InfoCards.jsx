@@ -1,6 +1,7 @@
 import { usePage } from "@inertiajs/react";
 import Card from "./Card";
 import { Users, ShoppingCart, Package, IndianRupeeIcon } from "lucide-react";
+import { formatNPR } from "./Modal";
 
 const InfoCards = () => {
     const { products, sales, userCount } = usePage().props;
@@ -14,7 +15,7 @@ const InfoCards = () => {
                     />
                     <Card
                         title="Total Sales"
-                        value={sales.total_price}
+                        value={formatNPR(sales.total_price)}
                         Icon={IndianRupeeIcon}
                     />
                     <Card
@@ -24,7 +25,7 @@ const InfoCards = () => {
                     />
                     <Card
                         title="Today's Sales"
-                        value={sales.today_sales}
+                        value={formatNPR(sales.today_sales)}
                         Icon={ShoppingCart}
                     />
                 </div>

@@ -1,5 +1,6 @@
 import { AlertTriangle, Trash } from "lucide-react";
 import { useState } from "react";
+import Overlay from "./Overlay";
 
 export function DeleteButton({ onConfirm, attr }) {
     const [showModal, setShowModal] = useState(false);
@@ -13,8 +14,8 @@ export function DeleteButton({ onConfirm, attr }) {
             </button>
 
             {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-                    <div className="bg-white p-6 rounded-xl shadow-lg w-96">
+                <Overlay onClose={() => setShowModal(false)}>
+                    <div className="bg-white p-6 rounded-xl shadow-lg w-96 max-w-full">
                         <h2 className="text-lg font-semibold">Confirm Delete</h2>
                         <p className="mt-2 text-gray-600">
                             Are you sure you want to delete this {attr}?
@@ -41,7 +42,7 @@ export function DeleteButton({ onConfirm, attr }) {
                             </button>
                         </div>
                     </div>
-                </div>
+                </Overlay>
             )}
         </>
     );

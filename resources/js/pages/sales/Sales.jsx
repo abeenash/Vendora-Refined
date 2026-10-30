@@ -5,6 +5,8 @@ import { route } from "ziggy-js";
 import { toast } from "react-toastify";
 import { DeleteButton } from "../../components/DeleteButton";
 import { Cancellation } from "../../components/Cancellation";
+import { ListGate, showSearch } from "../../components/EmptyState";
+import { ShoppingCart } from "lucide-react";
 
 // Status Badge Component
 const StatusBadge = ({ sale }) => {
@@ -37,8 +39,8 @@ const StatusBadge = ({ sale }) => {
                         `Sale #${sale.sale_id} updated to ${newStatus}`
                     );
                 },
-                onError: () => {
-                    toast.error(`Failed to update status`);
+                onError: (errors) => {
+                    toast.error(errors.status || `Failed to update status`);
                 },
             }
         );
@@ -95,8 +97,8 @@ const StatusBadge = ({ sale }) => {
 };
 
 const Sales = () => {
-    const { sales, flash, users } = usePage().props;
-    const [search, setSearch] = useState("");
+    const { sales, flash, users, search: initialSearch } = usePage().props;
+    const [search, setSearch] = useState(initialSearch || "");
 
     useEffect(() => {
         if (flash?.success) toast.success(flash.success);
@@ -141,7 +143,7 @@ const Sales = () => {
                 </header>
 
                 {/* Search Bar */}
-                <div className="mb-6">
+                {showSearch(sales.data, search) && <div className="mb-6">
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-gray-400" />
@@ -154,9 +156,15 @@ const Sales = () => {
                             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"
                         />
                     </div>
-                </div>
+                </div>}
 
                 {/* Sales Table */}
+                <ListGate
+                    items={sales.data}
+                    search={search}
+                    onClearSearch={() => handleSearch({ target: { value: "" } })}
+                    empty={{ Icon: ShoppingCart, title: "No sales yet", message: "Record your first sale. Stock is deducted automatically and the invoice shows up in Receivables until it's paid.", action: { label: "Record your first sale", href: route("sales.create"), Icon: Plus } }}
+                >
                 <div className="bg-white rounded-xl shadow-md">
                     <div className="p-6 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-700">
@@ -265,16 +273,6 @@ const Sales = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {sales.data.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan="7"
-                                            className="px-6 py-4 text-center text-gray-500"
-                                        >
-                                            No Sales Found
-                                        </td>
-                                    </tr>
-                                )}
                             </tbody>
                         </table>
                     </div>
@@ -300,6 +298,7 @@ const Sales = () => {
                         ))}
                     </div>
                 </div>
+                </ListGate>
             </div>
         </div>
     );

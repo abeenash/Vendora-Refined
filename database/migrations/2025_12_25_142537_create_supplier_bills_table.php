@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('supplier_bills', function (Blueprint $table) {
             $table->id();
             $table->string('bill_number')->unique();
-            $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('supplier_id')->constrained()->restrictOnDelete();
             $table->foreignId('purchase_order_id')->nullable()->constrained('purchase_orders')->nullOnDelete();
             $table->date('bill_date')->nullable();
             $table->date('due_date')->nullable();

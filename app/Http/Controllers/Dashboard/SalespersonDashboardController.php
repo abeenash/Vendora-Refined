@@ -46,6 +46,7 @@ class SalespersonDashboardController extends Controller
                 DB::raw('SUM(total_price) as total')
             )
             ->where('user_id', $userId)
+            ->where('status', '!=', 'Cancelled')
             ->whereBetween('created_at', [
                 Carbon::now()->startOfDay()->subDays(6),
                 Carbon::now()->endOfDay(),
@@ -64,6 +65,7 @@ class SalespersonDashboardController extends Controller
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->where('sales.user_id', $userId)
+            ->where('sales.status', '!=', 'Cancelled')
             ->whereBetween('sales.created_at', [
                 Carbon::now()->startOfDay()->subDays(30),
                 Carbon::now()->endOfDay(),

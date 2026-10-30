@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->timestamps();
+            //a category whose (archived) products appear on old invoices is archived, not erased
+            $table->softDeletes();
         });
     }
 

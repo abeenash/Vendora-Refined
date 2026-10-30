@@ -10,10 +10,10 @@ class PurchaseOrderItem extends Model
         'purchase_order_id',
         'product_id',
         'quantity_ordered',
+        'quantity_received',
         'unit_price',
         'tax',
-        'discount',
-        'subtotal'
+        'total_price',
     ];
 
     public function purchaseOrder()
@@ -23,6 +23,11 @@ class PurchaseOrderItem extends Model
 
     public function product()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    public function remaining(): int
+    {
+        return max(0, $this->quantity_ordered - $this->quantity_received);
     }
 }

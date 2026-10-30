@@ -1,3 +1,5 @@
+import { router } from "@inertiajs/react";
+
 const Paginator = ({ section }) => {
     return (
         <div className="p-4 flex justify-center space-x-2">

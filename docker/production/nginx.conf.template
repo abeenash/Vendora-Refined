@@ -1,0 +1,41 @@
+# ${PORT} is filled in by entrypoint.sh (envsubst); no other variables are substituted.
+server {
+    listen ${PORT} default_server;
+    server_name _;
+    root /var/www/html/public;
+    index index.php;
+
+    client_max_body_size 10m;
+    server_tokens off;
+
+    access_log off;
+    error_log /dev/stderr warn;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # Vite assets have a content hash in their name, so they can be cached for a year
+    location /build/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_read_timeout 120s;
+    }
+
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+}

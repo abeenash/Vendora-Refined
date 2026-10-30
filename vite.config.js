@@ -7,7 +7,8 @@ import path from 'path';
 export default defineConfig({
     plugins: [
         laravel({
-            input: 'resources/js/app.jsx',
+            //every file passed to @vite() in app.blade.php must be listed, or production builds 500
+            input: ['resources/js/App.jsx', 'resources/css/app.css'],
             refresh: true,
         }),
         tailwindcss(),

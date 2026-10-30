@@ -13,7 +13,7 @@ class CategoryController extends Controller
     {
         $categories = Category::query()
             ->when($request->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%");
+                $query->whereLike('name', "%{$search}%");
             })
             ->orderBy('id', 'desc')
             ->paginate(5)
@@ -22,9 +22,7 @@ class CategoryController extends Controller
         return Inertia::render("categories/Categories", [
             'categories' => $categories,
             'search' => $request->search,
-            'flash' => [
-                'success' => session('success')
-            ]
+            //flash (success + error) is shared globally in AppServiceProvider
         ]);
     }
 
@@ -42,21 +40,22 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name',
+            'name' => 'required|string|max:255|unique:categories,name,NULL,id,deleted_at,NULL',
         ]);
 
-        Category::create($request->all());
+        //re-creating an archived category brings the old one back (the name is unique in the database)
+        $archived = Category::onlyTrashed()->where('name', $request->name)->first();
+        if ($archived) {
+            $archived->restore();
+            return redirect()
+                ->route('categories.index')
+                ->with('success', 'Category ' . $archived->name . ' was restored from the archive.');
+        }
+
+        Category::create($request->only('name'));
         return redirect()
             ->route('categories.index')
             ->with('success', 'Category ' . $request->name . ' added successfully!');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Category $category)
-    {
-        //
     }
 
     /**
@@ -74,11 +73,14 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
+        //archived names count too: the database index is unique across all rows
         $request->validate([
-            'name' => 'required|string',
+            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
+        ], [
+            'name.unique' => 'That name is already used by another (possibly archived) category.',
         ]);
 
-        $category->update($request->all());
+        $category->update($request->only('name'));
         return redirect()
             ->route('categories.index')
             ->with('success', 'Category ' . $request->name . ' has been updated!');
@@ -89,7 +91,23 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        $category->delete();
+        //products you can still sell must be moved or deleted first
+        $active = $category->products()->count();
+        if ($active > 0) {
+            return redirect()
+                ->back()
+                ->with('error', "Category {$category->name} still has {$active} " . str('product')->plural($active) . '. Move or delete them first.');
+        }
+
+        //only archived products (kept for sales history) remain: archive the category with them
+        if ($category->products()->onlyTrashed()->exists()) {
+            $category->delete();
+            return redirect()
+                ->back()
+                ->with('success', 'Category ' . $category->name . ' was archived (its old products still appear on past invoices).');
+        }
+
+        $category->forceDelete();
         return redirect()
             ->back()
             ->with('success', 'Category ' . $category->name . ' has been deleted!');

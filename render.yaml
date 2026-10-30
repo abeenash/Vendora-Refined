@@ -1,0 +1,40 @@
+# Render Blueprint: Dashboard -> New -> Blueprint -> pick this repo.
+# The two secrets (APP_KEY, DB_URL) are asked for when the Blueprint is created.
+services:
+  - type: web
+    name: vendora
+    runtime: docker
+    plan: free
+    region: singapore            # same region as the Neon database (AWS ap-southeast-1)
+    branch: main
+    dockerfilePath: ./docker/production/Dockerfile
+    dockerContext: .
+    healthCheckPath: /up         # no session/DB, so uptime pings don't keep Neon awake
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: Vendora
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY             # php artisan key:generate --show
+        sync: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL              # Neon connection string (…?sslmode=require)
+        sync: false
+      - key: DEMO_MODE           # demo logins on the login page + nightly rolling reset
+        value: "true"
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
