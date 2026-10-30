@@ -3,6 +3,7 @@ import { XCircle, AlertTriangle } from "lucide-react";
 import { router, usePage } from "@inertiajs/react";
 import { route } from "ziggy-js";
 import { toast } from "react-toastify";
+import Overlay from "./Overlay";
 
 export function Cancellation({ saleId, customerName, onClose }) {
     const [loading, setLoading] = useState(false);
@@ -19,17 +20,17 @@ export function Cancellation({ saleId, customerName, onClose }) {
                     onClose(true); //this will close the modal
                     toast.success("Sale cancelled successfully");
                 },
-                onError: () => {
+                onError: (errors) => {
                     setLoading(false); //this will stop the loading state
                     onClose(false); //this will close the modal
-                    toast.error("Failed to cancel sale");
+                    toast.error(errors.status || "Failed to cancel sale");
                 },
             }
         );
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <Overlay onClose={() => onClose(false)}>
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200">
                 <div className="flex items-start space-x-4">
                     {/* Icon */}
@@ -69,6 +70,6 @@ export function Cancellation({ saleId, customerName, onClose }) {
                     </div>
                 </div>
             </div>
-        </div>
+        </Overlay>
     );
 }
