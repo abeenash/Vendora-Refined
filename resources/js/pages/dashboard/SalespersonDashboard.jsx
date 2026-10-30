@@ -1,46 +1,41 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import InfoCards from "../../components/InfoCards";
-import ChartCard from "../../components/ChartCard";
+import { route } from "ziggy-js";
+import ChartCard, { ChartSkeleton, hasValues } from "../../components/ChartCard";
+import EmptyState from "../../components/EmptyState";
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from "recharts";
-import { BarChart3, TrendingUp, History } from "lucide-react";
+import { BarChart3, TrendingUp, History, ShoppingCart } from "lucide-react";
 import { Link } from "@inertiajs/react";
 
 const SalespersonDashboard = () => {
-    const [stats, setStats] = useState({});
     const [weeklySales, setWeeklySales] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
-    const [activities, setActivities] = useState([]);
+    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        // axios.get("/api/sales/my-stats").then(res => {
-        //     setStats(res.data);
-        // });
-
-        axios.get("/api/sales/my-weekly-sales")
-            .then(res => {
-                if (res.data.data) {
-                    setWeeklySales(
-                        res.data.data.map(item => ({
-                            day: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
-                            sales: item.total
-                        }))
-                    );
-                }
-            })
-            .catch(err => console.error("Weekly Sales Error:", err));
-
-        axios.get("/api/sales/my-top-products")
-            .then(res => {
-                if (res.data.data) {
-                    setTopProducts(res.data.data);
-                }
-            })
-            .catch(err => console.error("Top Products Error:", err));
-
+        Promise.allSettled([
+            axios.get("/api/sales/my-weekly-sales"),
+            axios.get("/api/sales/my-top-products"),
+        ]).then(([weeklyRes, topRes]) => {
+            if (weeklyRes.status === "fulfilled" && weeklyRes.value.data.data) {
+                setWeeklySales(
+                    weeklyRes.value.data.data.map(item => ({
+                        day: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
+                        sales: Number(item.total)
+                    }))
+                );
+            }
+            if (topRes.status === "fulfilled" && topRes.value.data.data) {
+                setTopProducts(topRes.value.data.data.map(item => ({ ...item, total_qty: Number(item.total_qty) })));
+            }
+            setLoaded(true);
+        });
     }, []);
+
+    const hasWeekly = hasValues(weeklySales, "sales");
+    const hasTop = hasValues(topProducts, "total_qty");
 
     return (
         <>
@@ -52,58 +47,56 @@ const SalespersonDashboard = () => {
                     <span>Recent Activity</span>
                     <History size={16} />
                 </Link>
-
             </div>
 
-            {/* PERSONAL INFO CARDS */}
-            {/* <InfoCards data={{
-                todaysSales: stats.today_total,
-                monthlySales: stats.month_total,
-                totalCustomers: stats.customer_count,
-                totalSalesCount: stats.total_sales_count
-            }} /> */}
+            {!loaded && (
+                <div className="grid gap-6 lg:grid-cols-2 mt-6">
+                    <ChartSkeleton />
+                    <ChartSkeleton />
+                </div>
+            )}
 
-            <div className="grid gap-6 lg:grid-cols-2 mt-6">
-                {/* MY WEEKLY SALES */}
-                <ChartCard title="My Daily Sales (Last 7 Days)" Icon={TrendingUp}>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={weeklySales}>
-                            <XAxis dataKey="day" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="sales" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </ChartCard>
+            {/* nothing sold recently: one friendly prompt instead of two empty charts */}
+            {loaded && !hasWeekly && !hasTop && (
+                <EmptyState
+                    Icon={ShoppingCart}
+                    title="Your charts will appear here"
+                    message="Once you record a sale, your daily sales and your top products for the last 30 days show up on this dashboard."
+                    action={{ label: "Start now: record a sale", href: route("sales.create") }}
+                />
+            )}
 
-                {/* MY TOP PRODUCTS */}
-                <ChartCard title="Top Products I Sold" Icon={BarChart3}>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart layout="vertical" data={topProducts}>
-                            <YAxis dataKey="product_name" type="category" tick={{ fontSize: 12 }} />
-                            <XAxis dataKey="total_qty" type="number" />
-                            <Tooltip />
-                            <Bar dataKey="total_qty" fill="#10b981" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </ChartCard>
-            </div>
+            {loaded && (hasWeekly || hasTop) && (
+                <div className="grid gap-6 lg:grid-cols-2 mt-6">
+                    {/* MY WEEKLY SALES */}
+                    {hasWeekly && (
+                        <ChartCard title="My Daily Sales (Last 7 Days)" Icon={TrendingUp}>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={weeklySales}>
+                                    <XAxis dataKey="day" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Bar dataKey="sales" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartCard>
+                    )}
 
-            {/* RECENT ACTIVITIES */}
-            {/* <div className="mt-6">
-                <ChartCard title="My Recent Activity" Icon={History}>
-                    <ul className="space-y-2 text-sm">
-                        {activities.map((a, i) => (
-                            <li key={i} className="p-2 border rounded-md bg-gray-50">
-                                <strong>{a.type}</strong> – {a.description}
-                                <span className="text-gray-500 ml-2">
-                                    ({new Date(a.created_at).toLocaleString()})
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </ChartCard>
-            </div> */}
+                    {/* MY TOP PRODUCTS */}
+                    {hasTop && (
+                        <ChartCard title="Top Products I Sold" Icon={BarChart3}>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart layout="vertical" data={topProducts}>
+                                    <YAxis dataKey="product_name" type="category" tick={{ fontSize: 12 }} />
+                                    <XAxis dataKey="total_qty" type="number" />
+                                    <Tooltip />
+                                    <Bar dataKey="total_qty" fill="#10b981" radius={[0, 4, 4, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartCard>
+                    )}
+                </div>
+            )}
         </>
     );
 };
