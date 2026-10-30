@@ -8,21 +8,23 @@ class GrnItem extends Model
 {
     protected $fillable = [
         'grn_id',
+        'purchase_order_item_id',
         'product_id',
-        'quantity_received',
-        'unit_price',
-        'tax',
-        'discount',
-        'subtotal'
+        'qty_received',
     ];
 
     public function grn()
     {
-        return $this->belongsTo(Grn::class);
+        return $this->belongsTo(GRN::class, 'grn_id');
+    }
+
+    public function purchaseOrderItem()
+    {
+        return $this->belongsTo(PurchaseOrderItem::class);
     }
 
     public function product()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 }
