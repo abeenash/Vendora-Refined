@@ -30,14 +30,13 @@ class LoginController extends Controller
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        if($user->role==='salesperson' && $user->first_login){
-            return redirect()->route('force-password-reset');
-        }
         $user->last_login = now();
         $user->save();
 
-        return $user->role === 'admin'
-        ? redirect()->route('dashboard.admin')
-        : redirect()->route('dashboard.salesperson');
+        if($user->first_login){
+            return redirect()->route('force-password-reset');
+        }
+
+        return redirect()->route($user->dashboardRoute());
     }
 }
